@@ -89,13 +89,31 @@ enoom! {
     Nedis, "nedis";
 }
 
-#[derive(Show, PartialEq)]
+#[derive(Show, PartialEq, Clone)]
 pub struct LanguageTag {
     language: Option<Language>,
     extlang: Option<Extlang>,
     script: Option<Script>,
     region: Option<Region>,
     variants: Vec<Variant>
+}
+
+impl LanguageTag {
+    // Client: en-GB; matches: en-GB
+    // Client: en; matches: en-US
+    // TODO: Match canonical forms?
+    fn matches(&self, other: &LanguageTag) -> bool {
+        if self.language.is_some() && self.language != other.language {
+            return false;
+        } else if self.extlang.is_some() && self.extlang != other.extlang {
+            return false;
+        }  else if self.script.is_some() && self.script != other.script {
+            return false;
+        } else if self.region.is_some() && self.region != other.region {
+            return false;
+        }
+        self.variants.iter().all(|v: &Variant| other.variants.iter().any(|o: &Variant| v == o))
+    }
 }
 
 impl Default for LanguageTag {
@@ -261,5 +279,13 @@ mod tests {
     fn test_fmt() {
         let a: LanguageTag = "ar-arb-Latn-DE-nedis-foobar".parse().unwrap();
         assert_eq!(format!("{}", a), "ar-arb-Latn-DE-nedis-foobar");
+    }
+
+    #[test]
+    fn test_match() {
+        let de_de: LanguageTag = "de-DE".parse().unwrap();
+        let de: LanguageTag = "de".parse().unwrap();
+        assert!(de.matches(&de_de));
+        assert!(!de_de.matches(&de));
     }
 }
