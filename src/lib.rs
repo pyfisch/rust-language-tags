@@ -3,6 +3,8 @@ use std::str::FromStr;
 use std::default::Default;
 use std::ascii::AsciiExt;
 
+#[allow(unstable)]
+
 
 macro_rules! inspect(
     ($s:expr, $t:expr) => ({
