@@ -1,11 +1,18 @@
+#![feature(plugin)]
+#![plugin(phf_macros)]
+
+extern crate phf;
+
 use std::fmt;
 use std::str::FromStr;
 use std::default::Default;
 use std::ascii::AsciiExt;
 
-pub use language::Language;
+#[cfg(feature="testdata")]
+pub use testdata::*;
 
-mod language;
+#[cfg(not(feature="testdata"))]
+pub use data::*;
 
 
 macro_rules! inspect(
@@ -16,245 +23,40 @@ macro_rules! inspect(
 );
 
 macro_rules! enoom {
-    (pub enum $en:ident; $ext:ident; $($ty:ident, $text:expr;)*) => (
+    (pub enum $enum_id:ident; $keywords:ident; $extension:ident; $($variant:ident, $nice:expr, $lower:expr;)*) => (
 
-        #[derive(Clone, Debug)]
-        pub enum $en {
-            $($ty),*,
-            $ext(String)
+        #[derive(Clone, Debug, PartialEq, Eq)]
+        pub enum $enum_id {
+            $($variant),*,
+            $extension(String)
         }
 
-        impl PartialEq for $en {
-            fn eq(&self, other: &$en) -> bool {
-                match (self, other) {
-                    $( (&$en::$ty, &$en::$ty) => true ),*,
-                    (&$en::$ext(ref a), &$en::$ext(ref b)) => a == b,
-                    _ => self.to_string() == other.to_string()
-                }
-            }
-        }
+        static $keywords: ::phf::Map<&'static str, $enum_id> = phf_map! {
+            $($lower => $enum_id::$variant),*,
+        };
 
-        impl fmt::String for $en {
-            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        impl ::std::fmt::Display for $enum_id {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
                 f.write_str(match *self {
-                    $($en::$ty => $text),*,
-                    $en::$ext(ref s) => &**s
+                    $($enum_id::$variant => $nice),*,
+                    $enum_id::$extension(ref s) => &**s
                 })
             }
         }
 
-        impl FromStr for $en {
-            fn from_str(s: &str) -> Option<$en> {
-                Some(match s {
-                    $(_s if _s == $text.to_ascii_lowercase() => $en::$ty),*,
-                    s => $en::$ext(inspect!(stringify!($ext), s).to_string())
+        impl ::std::str::FromStr for $enum_id {
+            type Err = ();
+            fn from_str(s: &str) -> Result<Self, <Self as ::std::str::FromStr>::Err> {
+                Ok(match $keywords.get(s) {
+                    Some(s) => s.clone(),
+                    None => $enum_id::$extension(inspect!(stringify!($extension), s).to_string())
                 })
             }
         }
     )
 }
 
-enoom! {
-    pub enum Extlang;
-    Ext;
-    Yue, "yue";
-    Afb, "afb";
-}
-
-enoom! {
-    pub enum Script;
-    Ext;
-    Adlm, "Adlm";
-    Afak, "Afak";
-    Aghb, "Aghb";
-    Ahom, "Ahom";
-    Arab, "Arab";
-    Aran, "Aran";
-    Armi, "Armi";
-    Armn, "Armn";
-    Avst, "Avst";
-    Bali, "Bali";
-    Bamu, "Bamu";
-    Bass, "Bass";
-    Batk, "Batk";
-    Beng, "Beng";
-    Blis, "Blis";
-    Bopo, "Bopo";
-    Brah, "Brah";
-    Brai, "Brai";
-    Bugi, "Bugi";
-    Buhd, "Buhd";
-    Cakm, "Cakm";
-    Cans, "Cans";
-    Cari, "Cari";
-    Cham, "Cham";
-    Cher, "Cher";
-    Cirt, "Cirt";
-    Copt, "Copt";
-    Cprt, "Cprt";
-    Cyrl, "Cyrl";
-    Cyrs, "Cyrs";
-    Deva, "Deva";
-    Dsrt, "Dsrt";
-    Dupl, "Dupl";
-    Egyd, "Egyd";
-    Egyh, "Egyh";
-    Egyp, "Egyp";
-    Elba, "Elba";
-    Ethi, "Ethi";
-    Geok, "Geok";
-    Geor, "Geor";
-    Glag, "Glag";
-    Goth, "Goth";
-    Gran, "Gran";
-    Grek, "Grek";
-    Gujr, "Gujr";
-    Guru, "Guru";
-    Hang, "Hang";
-    Hani, "Hani";
-    Hano, "Hano";
-    Hans, "Hans";
-    Hant, "Hant";
-    Hatr, "Hatr";
-    Hebr, "Hebr";
-    Hira, "Hira";
-    Hluw, "Hluw";
-    Hmng, "Hmng";
-    Hrkt, "Hrkt";
-    Hung, "Hung";
-    Inds, "Inds";
-    Ital, "Ital";
-    Java, "Java";
-    Jpan, "Jpan";
-    Jurc, "Jurc";
-    Kali, "Kali";
-    Kana, "Kana";
-    Khar, "Khar";
-    Khmr, "Khmr";
-    Khoj, "Khoj";
-    Kitl, "Kitl";
-    Kits, "Kits";
-    Knda, "Knda";
-    Kore, "Kore";
-    Kpel, "Kpel";
-    Kthi, "Kthi";
-    Lana, "Lana";
-    Laoo, "Laoo";
-    Latf, "Latf";
-    Latg, "Latg";
-    Latn, "Latn";
-    Lepc, "Lepc";
-    Limb, "Limb";
-    Lina, "Lina";
-    Linb, "Linb";
-    Lisu, "Lisu";
-    Loma, "Loma";
-    Lyci, "Lyci";
-    Lydi, "Lydi";
-    Mahj, "Mahj";
-    Mand, "Mand";
-    Mani, "Mani";
-    Marc, "Marc";
-    Maya, "Maya";
-    Mend, "Mend";
-    Merc, "Merc";
-    Mero, "Mero";
-    Mlym, "Mlym";
-    Modi, "Modi";
-    Mong, "Mong";
-    Moon, "Moon";
-    Mroo, "Mroo";
-    Mtei, "Mtei";
-    Mult, "Mult";
-    Mymr, "Mymr";
-    Narb, "Narb";
-    Nbat, "Nbat";
-    Nkgb, "Nkgb";
-    Nkoo, "Nkoo";
-    Nshu, "Nshu";
-    Ogam, "Ogam";
-    Olck, "Olck";
-    Orkh, "Orkh";
-    Orya, "Orya";
-    Osge, "Osge";
-    Osma, "Osma";
-    Palm, "Palm";
-    Pauc, "Pauc";
-    Perm, "Perm";
-    Phag, "Phag";
-    Phli, "Phli";
-    Phlp, "Phlp";
-    Phlv, "Phlv";
-    Phnx, "Phnx";
-    Plrd, "Plrd";
-    Prti, "Prti";
-    Rjng, "Rjng";
-    Roro, "Roro";
-    Runr, "Runr";
-    Samr, "Samr";
-    Sara, "Sara";
-    Sarb, "Sarb";
-    Saur, "Saur";
-    Sgnw, "Sgnw";
-    Shaw, "Shaw";
-    Shrd, "Shrd";
-    Sidd, "Sidd";
-    Sind, "Sind";
-    Sinh, "Sinh";
-    Sora, "Sora";
-    Sund, "Sund";
-    Sylo, "Sylo";
-    Syrc, "Syrc";
-    Syre, "Syre";
-    Syrj, "Syrj";
-    Syrn, "Syrn";
-    Tagb, "Tagb";
-    Takr, "Takr";
-    Tale, "Tale";
-    Talu, "Talu";
-    Taml, "Taml";
-    Tang, "Tang";
-    Tavt, "Tavt";
-    Telu, "Telu";
-    Teng, "Teng";
-    Tfng, "Tfng";
-    Tglg, "Tglg";
-    Thaa, "Thaa";
-    Thai, "Thai";
-    Tibt, "Tibt";
-    Tirh, "Tirh";
-    Ugar, "Ugar";
-    Vaii, "Vaii";
-    Visp, "Visp";
-    Wara, "Wara";
-    Wole, "Wole";
-    Xpeo, "Xpeo";
-    Xsux, "Xsux";
-    Yiii, "Yiii";
-    Zinh, "Zinh";
-    Zmth, "Zmth";
-    Zsym, "Zsym";
-    Zxxx, "Zxxx";
-    Zyyy, "Zyyy";
-    Zzzz, "Zzzz";
-}
-
-enoom! {
-    pub enum Region;
-    Ext;
-    De, "DE";
-    Fr, "FR";
-    It, "IT";
-    R005, "005";
-}
-
-enoom! {
-    pub enum Variant;
-    Ext;
-    Nedis, "nedis";
-}
-
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct LanguageTag {
     language: Option<Language>,
     extlang: Option<Extlang>,
@@ -297,39 +99,40 @@ fn is_number(string: &str) -> bool {
 }
 
 impl std::str::FromStr for LanguageTag {
-    fn from_str(s: &str) -> Option<Self> {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, ()> {
         match s.is_ascii() {
             true => {
                 let mut tag: LanguageTag = Default::default();
                 let a = s.to_ascii_lowercase();
                 for (i, code) in a.split('-').enumerate() {
                     if i == 0 {
-                        tag.language = code.parse();
+                        tag.language = code.parse().ok();
                     } else if i == 1 && code.len() == 3 && !(is_number(code)) {
-                        tag.extlang = code.parse();
+                        tag.extlang = code.parse().ok();
                     } else if code.len() == 4 {
-                        tag.script = code.parse();
+                        tag.script = code.parse().ok();
                     } else if (code.len() == 2 && !(is_number(code))) ||
                             (code.len() == 3 && is_number(code)) {
-                        tag.region = code.parse();
+                        tag.region = code.parse().ok();
                     } else if code.len() > 3 {
-                        match code.parse::<Variant>() {
+                        match code.parse::<Variant>().ok() {
                             Some(v) => tag.variants.push(v),
                             None => {},
                             }
                     } else {
-                        return None;
+                        return Err(());
                     }
                 }
-                Some(tag)
+                Ok(tag)
             },
-            false => None,
+            false => Err(()),
         }
 
     }
 }
 
-impl fmt::String for LanguageTag {
+impl fmt::Display for LanguageTag {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut parts = vec![];
         match self.language {
@@ -362,7 +165,13 @@ impl fmt::String for LanguageTag {
     }
 }
 
+#[cfg(feature="testdata")]
+mod testdata;
 
+#[cfg(not(feature="testdata"))]
+mod data;
+
+#[cfg(test)]
 mod tests {
     use std::default::Default;
     use super::*;
@@ -424,7 +233,7 @@ mod tests {
 
     #[test]
     fn test_invalid_from_str() {
-        assert_eq!("sl-07".parse::<LanguageTag>(), None);
+        assert_eq!("sl-07".parse::<LanguageTag>(), Err(()));
     }
 
     #[test]
