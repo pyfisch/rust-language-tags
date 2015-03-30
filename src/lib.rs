@@ -1,5 +1,14 @@
+#![deny(missing_docs)]
 #![feature(plugin)]
 #![plugin(phf_macros)]
+
+//! Language tags can be used identify human languages, scripts e.g. Latin script, countries and
+//! other regions.
+//!
+//! Language tags are defined in [BCP47](http://tools.ietf.org/html/bcp47), an introduction is
+//! ["Language tags in HTML and XML"](http://www.w3.org/International/articles/language-tags/) by
+//! the W3C. They are commonly used in HTML and HTTP `Content-Language` and `Accept-Language`
+//! header fields.
 
 extern crate phf;
 
@@ -24,7 +33,7 @@ macro_rules! inspect(
 
 macro_rules! enoom {
     (pub enum $enum_id:ident; $keywords:ident; $extension:ident; $($variant:ident, $nice:expr, $lower:expr;)*) => (
-
+        #[allow(missing_docs)]
         #[derive(Clone, Debug, PartialEq, Eq)]
         pub enum $enum_id {
             $($variant),*,
@@ -56,6 +65,8 @@ macro_rules! enoom {
     )
 }
 
+
+/// A language tag as desribed in [BCP47](http://tools.ietf.org/html/bcp47)
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct LanguageTag {
     language: Option<Language>,
@@ -66,10 +77,12 @@ pub struct LanguageTag {
 }
 
 impl LanguageTag {
-    // Client: en-GB; matches: en-GB
-    // Client: en; matches: en-US
-    // TODO: Match canonical forms?
-    fn matches(&self, other: &LanguageTag) -> bool {
+    /// Matches language tags like described in
+    /// [rfc4647#Extended filtering](https://tools.ietf.org/html/rfc4647#section-3.3.2)
+    ///
+    /// For example `en-GB` matches only `en-GB` and `en-Arab-GB` but not `en`. While `en` matches
+    /// all of `en`, `en-GB` ,`en-Arab` and `en-Arab-GB`.
+    pub fn matches(&self, other: &LanguageTag) -> bool {
         if self.language.is_some() && self.language != other.language {
             return false;
         } else if self.extlang.is_some() && self.extlang != other.extlang {

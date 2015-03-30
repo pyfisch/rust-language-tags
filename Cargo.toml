@@ -1,5 +1,4 @@
 [package]
-
 name = "language-tags"
 version = "0.0.1"
 authors = ["Pyfisch <pyfisch@gmail.com>"]
