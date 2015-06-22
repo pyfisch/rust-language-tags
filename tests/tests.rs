@@ -67,7 +67,7 @@ fn test_variant_from_str() {
 
 #[test]
 fn test_invalid_from_str() {
-    assert_eq!("sl-07".parse::<LanguageTag>(), Err(Error));
+    assert_eq!("sl-07".parse::<LanguageTag>(), Err(Error::InvalidSubtag));
 }
 
 #[test]

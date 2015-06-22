@@ -46,11 +46,11 @@
 //! assert!(langtag2.matches(&langtag1));
 //! ```
 
-use std::fmt::{self, Display, Formatter};
-use std::str::FromStr;
-use std::default::Default;
 use std::ascii::AsciiExt;
 use std::collections::BTreeMap;
+use std::error::Error as ErrorTrait;
+use std::fmt::{self, Display, Formatter};
+use std::str::FromStr;
 
 fn is_alphabetic(s: &str) -> bool {
     s.chars().all(|x| x >= 'A' && x <= 'Z' || x >= 'a' && x <= 'z')
@@ -61,13 +61,53 @@ fn is_numeric(s: &str) -> bool {
 }
 
 fn is_alphanumeric_or_dash(s: &str) -> bool {
-    s.chars().all(|x| x >= 'A' && x <= 'Z' || x >= 'a' && x <= 'z' || x >= '0' && x <= '9' || x == '-')
+    s.chars().all(|x| x >= 'A' && x <= 'Z' || x >= 'a' && x <= 'z' ||
+                      x >= '0' && x <= '9' || x == '-')
 }
 
 /// Defines an Error type for langtags.
-// TODO: Extend this to be more specific.
+///
+/// Errors occur mainly during parsing of language tags.
 #[derive(Debug, Eq, PartialEq)]
-pub struct Error;
+pub enum Error {
+    /// The same extension subtag is only allowed once in a tag before the private use part.
+    DuplicateExtension,
+    /// If an extension subtag is present, it must not be empty.
+    EmptyExtension,
+    /// If the `x` subtag is present, it must not be empty.
+    EmptyPrivateUse,
+    /// The langtag contains a char that is not A-Z, a-z, 0-9 or the dash.
+    ForbiddenChar,
+    /// A subtag fails to parse, it does not match any other subtags.
+    InvalidSubtag,
+    /// The given language subtag is invalid.
+    InvalidLanguage,
+    /// A subtag may be eight characters in length at maximum.
+    SubtagTooLong,
+    /// At maximum three extlangs are allowed, but zero to one extlangs are preferred.
+    TooManyExtlangs,
+}
+
+impl ErrorTrait for Error {
+    fn description(&self) -> &str {
+        match *self {
+            Error::DuplicateExtension => "The same extension subtag is only allowed once in a tag",
+            Error::EmptyExtension => "If an extension subtag is present, it must not be empty",
+            Error::EmptyPrivateUse => "If the `x` subtag is present, it must not be empty",
+            Error::ForbiddenChar => "The langtag contains a char not allowed",
+            Error::InvalidSubtag => "A subtag fails to parse, it does not match any other subtags",
+            Error::InvalidLanguage => "The given language subtag is invalid",
+            Error::SubtagTooLong => "A subtag may be eight characters in length at maximum",
+            Error::TooManyExtlangs => "At maximum three extlangs are allowed",
+        }
+    }
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(self.description())
+    }
+}
 
 /// Result type used for this library.
 pub type Result<T> = ::std::result::Result<T, Error>;
@@ -214,7 +254,7 @@ impl std::str::FromStr for LanguageTag {
     fn from_str(s: &str) -> Result<Self> {
         let t = s.trim();
         if !is_alphanumeric_or_dash(t)  {
-            return Err(Error);
+            return Err(Error::ForbiddenChar);
         }
         // Handle grandfathered tags
         if let Some(tag) = GRANDFATHERED_IRREGULAR.iter().find(|x| x.eq_ignore_ascii_case(t)) {
@@ -233,7 +273,7 @@ impl std::str::FromStr for LanguageTag {
         for subtag in t.split('-') {
             if subtag.len() > 8 {
                 // > All subtags have a maximum length of eight characters.
-                return Err(Error);
+                return Err(Error::SubtagTooLong);
             }
             if position == 6 {
                 langtag.privateuse.push(subtag.to_owned());
@@ -242,7 +282,7 @@ impl std::str::FromStr for LanguageTag {
             } else if position == 0 {
                 // Primary language
                 if subtag.len() < 2 || !is_alphabetic(subtag) {
-                    return Err(Error)
+                    return Err(Error::InvalidLanguage)
                 }
                 langtag.language = Some(subtag.to_owned());
                 if subtag.len() < 4 {
@@ -261,7 +301,7 @@ impl std::str::FromStr for LanguageTag {
                 let x = [langtag.extlang.unwrap(), subtag.to_owned()].connect("-");
                 if x.len() > 11 {
                     // maximum 3 extlangs
-                    return Err(Error);
+                    return Err(Error::TooManyExtlangs);
                 }
                 langtag.extlang = Some(x);
             } else if position <= 2 && subtag.len() == 4 && is_alphabetic(subtag) {
@@ -280,18 +320,21 @@ impl std::str::FromStr for LanguageTag {
             } else if subtag.len() == 1 {
                 position = subtag.chars().next().unwrap() as u8;
                 if langtag.extensions.contains_key(&position) {
-                    return Err(Error);
+                    return Err(Error::DuplicateExtension);
                 }
                 langtag.extensions.insert(position, Vec::new());
             } else if position > 6 {
                 langtag.extensions.get_mut(&position).unwrap().push(subtag.to_owned());
             } else {
-                return Err(Error);
+                return Err(Error::InvalidSubtag);
             }
         }
-        if langtag.extensions.values().any(|x| x.is_empty()) || position == 6 && langtag.privateuse.is_empty() {
+        if langtag.extensions.values().any(|x| x.is_empty()) {
             // Extensions and privateuse must not be empty if present
-            return Err(Error);
+            return Err(Error::EmptyExtension);
+        }
+        if position == 6 && langtag.privateuse.is_empty() {
+            return Err(Error::EmptyPrivateUse);
         }
         return Ok(langtag);
 
