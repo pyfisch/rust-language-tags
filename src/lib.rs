@@ -8,6 +8,9 @@
 //! the W3C. They are commonly used in HTML and HTTP `Content-Language` and `Accept-Language`
 //! header fields.
 //!
+//! This package currently supports parsing (fully conformant parser), formatting and comparing
+//! language tags.
+//!
 //! # Examples
 //! Create a simple language tag representing the French language as spoken
 //! in Belgium and print it:

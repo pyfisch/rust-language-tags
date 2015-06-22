@@ -1,41 +1,49 @@
 # rust-language-tags
-Typesafe  [BCP47](http://tools.ietf.org/html/bcp47) language tag handling.
+Language tags can be used identify human languages, scripts e.g. Latin script, countries and
+other regions.
 
-See also http://www.w3.org/International/articles/language-tags/
+Language tags are defined in [BCP47](http://tools.ietf.org/html/bcp47), an introduction is
+["Language tags in HTML and XML"](http://www.w3.org/International/articles/language-tags/) by
+the W3C. They are commonly used in HTML and HTTP `Content-Language` and `Accept-Language`
+header fields.
 
-To compile with testdata run `cargo build --features testdata` and
-`cargo test --features testdata`. Using real data takes a long time to
-compile because of enum matching.
+This package currently supports parsing (fully conformant parser), formatting and comparing
+language tags.
 
-## Features
-* Parsing and formatting tags ☑
-* Parts
- * Language ☑
- * Extlang ☑
- * Script ☑
- * Region ☑
- * Variant ☑
- * Extension ☐
- * Privateuse ☐
-* Comparing tags ☑
-* IANA registered tags ☑ (currently using real data takes many minutes to comile)
-* Check if tag is valid ☐
-* much more... ☐
+# Examples
+Create a simple language tag representing the French language as spoken
+in Belgium and print it:
 
-
-## How to use it
-Create tags:
 ```rust
-use std::default::Default;
-let mut tag: LanguageTag = Default::default();
-tag.language = Some(Language::De);
-tag.region = Some(Region::De);
-println!("{}", tag) // "de-DE", German as spoken in Germany
+use language_tags::LanguageTag;
+let mut langtag: LanguageTag = Default::default();
+langtag.language = Some("fr".to_owned());
+langtag.region = Some("BE".to_owned());
+assert_eq!(format!("{}", langtag), "fr-BE");
 ```
 
-Parse tags:
+Parse a tag representing a special type of English specified by private agreement:
+
 ```rust
-// Parse Arabic written in Latin script
-let tag: LanguageTag = "ar-Latn".parse().unwrap();
-println!("{}", tag.script.unwrap()); // "Latn"
+use language_tags::LanguageTag;
+let langtag: LanguageTag = "en-x-twain".parse().unwrap();
+assert_eq!(format!("{}", langtag.language.unwrap()), "en");
+assert_eq!(format!("{:?}", langtag.privateuse), "[\"twain\"]");
+```
+
+You can check for equality, but more often you should test if two tags match.
+In this example we check if the resource in German language is suitable for
+a user from Austria. While people speaking Austrian German normally understand
+standard German the opposite is not always true. So the resource can be presented
+to the user but if the resource was in `de-AT` and a user asked for a representation
+in `de` the request should be rejected.
+
+```rust
+use language_tags::LanguageTag;
+let mut langtag1: LanguageTag = Default::default();
+langtag1.language = Some("de".to_owned());
+langtag1.region = Some("AT".to_owned());
+let mut langtag2: LanguageTag = Default::default();
+langtag2.language = Some("de".to_owned());
+assert!(langtag2.matches(&langtag1));
 ```
