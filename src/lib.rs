@@ -410,7 +410,7 @@ macro_rules! langtag {
             script: None,
             region: None,
             variants: Vec::new(),
-            extensions: BTreeMap::new(),
+            extensions: ::std::collections::BTreeMap::new(),
             privateuse: Vec::new(),
         }
     };
@@ -421,7 +421,7 @@ macro_rules! langtag {
             script: None,
             region: Some(stringify!($region).to_owned()),
             variants: Vec::new(),
-            extensions: BTreeMap::new(),
+            extensions: ::std::collections::BTreeMap::new(),
             privateuse: Vec::new(),
         }
     };
@@ -432,7 +432,7 @@ macro_rules! langtag {
             script: Some(stringify!($script).to_owned()),
             region: None,
             variants: Vec::new(),
-            extensions: BTreeMap::new(),
+            extensions: ::std::collections::BTreeMap::new(),
             privateuse: Vec::new(),
         }
     };
@@ -443,7 +443,7 @@ macro_rules! langtag {
             script: Some(stringify!($script).to_owned()),
             region: Some(stringify!($region).to_owned()),
             variants: Vec::new(),
-            extensions: BTreeMap::new(),
+            extensions: ::std::collections::BTreeMap::new(),
             privateuse: Vec::new(),
         }
     };
@@ -454,7 +454,7 @@ macro_rules! langtag {
             script: None,
             region: None,
             variants: Vec::new(),
-            extensions: BTreeMap::new(),
+            extensions: ::std::collections::BTreeMap::new(),
             privateuse: Vec::new(),
         }
     };
@@ -465,7 +465,7 @@ macro_rules! langtag {
             script: Some(stringify!($script).to_owned()),
             region: None,
             variants: Vec::new(),
-            extensions: BTreeMap::new(),
+            extensions: ::std::collections::BTreeMap::new(),
             privateuse: Vec::new(),
         }
     };
@@ -476,7 +476,7 @@ macro_rules! langtag {
             script: None,
             region: Some(stringify!($region).to_owned()),
             variants: Vec::new(),
-            extensions: BTreeMap::new(),
+            extensions: ::std::collections::BTreeMap::new(),
             privateuse: Vec::new(),
         }
     };
@@ -487,7 +487,7 @@ macro_rules! langtag {
             script: Some(stringify!($script).to_owned()),
             region: Some(stringify!($region).to_owned()),
             variants: Vec::new(),
-            extensions: BTreeMap::new(),
+            extensions: ::std::collections::BTreeMap::new(),
             privateuse: Vec::new(),
         }
     };
