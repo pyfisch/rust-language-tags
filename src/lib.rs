@@ -48,6 +48,8 @@
 //! langtag2.language = Some("de".to_owned());
 //! assert!(langtag2.matches(&langtag1));
 //! ```
+//!
+//! There is also the `langtag!` macro for creating language tags.
 
 use std::ascii::AsciiExt;
 use std::collections::BTreeMap;
@@ -386,4 +388,107 @@ impl fmt::Display for LanguageTag {
         }
         Ok(())
     }
+}
+
+#[macro_export]
+/// Utility for creating simple language tags.
+///
+/// The macro supports the language, exlang, script and region parts of language tags,
+/// they are separated by semicolons, omitted parts are denoted with mulitple semicolons.
+///
+/// # Examples
+/// * `it`: `langtag!(it)`
+/// * `it-LY`: `langtag!(it;;;LY)`
+/// * `it-Arab-LY`: `langtag!(it;;Arab;LY)`
+/// * `ar-afb`: `langtag!(ar;afb)`
+/// * `i-enochian`: `langtag!(i-enochian)`
+macro_rules! langtag {
+    ( $language:expr ) => {
+        LanguageTag {
+            language: Some(stringify!($language).to_owned()),
+            extlang: None,
+            script: None,
+            region: None,
+            variants: Vec::new(),
+            extensions: BTreeMap::new(),
+            privateuse: Vec::new(),
+        }
+    };
+    ( $language:expr;;;$region:expr ) => {
+        LanguageTag {
+            language: Some(stringify!($language).to_owned()),
+            extlang: None,
+            script: None,
+            region: Some(stringify!($region).to_owned()),
+            variants: Vec::new(),
+            extensions: BTreeMap::new(),
+            privateuse: Vec::new(),
+        }
+    };
+    ( $language:expr;;$script:expr ) => {
+        LanguageTag {
+            language: Some(stringify!($language).to_owned()),
+            extlang: None,
+            script: Some(stringify!($script).to_owned()),
+            region: None,
+            variants: Vec::new(),
+            extensions: BTreeMap::new(),
+            privateuse: Vec::new(),
+        }
+    };
+    ( $language:expr;;$script:expr;$region:expr ) => {
+        LanguageTag {
+            language: Some(stringify!($language).to_owned()),
+            extlang: None,
+            script: Some(stringify!($script).to_owned()),
+            region: Some(stringify!($region).to_owned()),
+            variants: Vec::new(),
+            extensions: BTreeMap::new(),
+            privateuse: Vec::new(),
+        }
+    };
+    ( $language:expr;$extlang:expr) => {
+        LanguageTag {
+            language: Some(stringify!($language).to_owned()),
+            extlang: Some(stringify!($extlang).to_owned()),
+            script: None,
+            region: None,
+            variants: Vec::new(),
+            extensions: BTreeMap::new(),
+            privateuse: Vec::new(),
+        }
+    };
+    ( $language:expr;$extlang:expr;$script:expr) => {
+        LanguageTag {
+            language: Some(stringify!($language).to_owned()),
+            extlang: Some(stringify!($extlang).to_owned()),
+            script: Some(stringify!($script).to_owned()),
+            region: None,
+            variants: Vec::new(),
+            extensions: BTreeMap::new(),
+            privateuse: Vec::new(),
+        }
+    };
+    ( $language:expr;$extlang:expr;;$region:expr ) => {
+        LanguageTag {
+            language: Some(stringify!($language).to_owned()),
+            extlang: Some(stringify!($extlang).to_owned()),
+            script: None,
+            region: Some(stringify!($region).to_owned()),
+            variants: Vec::new(),
+            extensions: BTreeMap::new(),
+            privateuse: Vec::new(),
+        }
+    };
+    ( $language:expr;$extlang:expr;$script:expr;$region:expr ) => {
+        LanguageTag {
+            language: Some(stringify!($language).to_owned()),
+            extlang: Some(stringify!($extlang).to_owned()),
+            script: Some(stringify!($script).to_owned()),
+            region: Some(stringify!($region).to_owned()),
+            variants: Vec::new(),
+            extensions: BTreeMap::new(),
+            privateuse: Vec::new(),
+        }
+    };
 }

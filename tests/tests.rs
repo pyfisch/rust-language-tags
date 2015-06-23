@@ -1,3 +1,4 @@
+#[macro_use]
 extern crate language_tags;
 
 use std::default::Default;
@@ -129,6 +130,43 @@ fn test_format() {
     assert_eq!(format!("{}", x), "HkgnmerM-x-e5-zf-VdDjcpz-1V6");
     let y: LanguageTag = "MgxQa-ywEp-8lcW-7bvT-h-dP1Md-0h7-0Z3ir".parse().unwrap();
     assert_eq!(format!("{}", y), "MgxQa-ywEp-8lcW-7bvT-h-dP1Md-0h7-0Z3ir");
+}
+
+#[test]
+fn test_macro() {
+    let a1 = langtag!(it);
+    let a2 = LanguageTag {
+        language: Some("it".to_owned()),
+        extlang: None,
+        script: None,
+        region: None,
+        variants: Vec::new(),
+        extensions: BTreeMap::new(),
+        privateuse: Vec::new(),
+    };
+    assert_eq!(a1, a2);
+    let b1 = langtag!(it;;;LY);
+    let b2 = LanguageTag {
+        language: Some("it".to_owned()),
+        extlang: None,
+        script: None,
+        region: Some("LY".to_owned()),
+        variants: Vec::new(),
+        extensions: BTreeMap::new(),
+        privateuse: Vec::new(),
+    };
+    assert_eq!(b1, b2);
+    let c1 = langtag!(it;;Arab;LY);
+    let c2 = LanguageTag {
+        language: Some("it".to_owned()),
+        extlang: None,
+        script: Some("Arab".to_owned()),
+        region: Some("LY".to_owned()),
+        variants: Vec::new(),
+        extensions: BTreeMap::new(),
+        privateuse: Vec::new(),
+    };
+    assert_eq!(c1, c2);
 }
 
 #[test]

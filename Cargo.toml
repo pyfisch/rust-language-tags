@@ -1,6 +1,6 @@
 [package]
 name = "language-tags"
-version = "0.0.3"
+version = "0.0.4"
 authors = ["Pyfisch <pyfisch@gmail.com>"]
 
 description = "Language tags for Rust"

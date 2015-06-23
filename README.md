@@ -47,3 +47,5 @@ let mut langtag2: LanguageTag = Default::default();
 langtag2.language = Some("de".to_owned());
 assert!(langtag2.matches(&langtag1));
 ```
+
+There is also the `langtag!` macro for creating language tags.
