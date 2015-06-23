@@ -404,7 +404,7 @@ impl fmt::Display for LanguageTag {
 /// * `i-enochian`: `langtag!(i-enochian)`
 macro_rules! langtag {
     ( $language:expr ) => {
-        LanguageTag {
+        $crate::LanguageTag {
             language: Some(stringify!($language).to_owned()),
             extlang: None,
             script: None,
@@ -415,7 +415,7 @@ macro_rules! langtag {
         }
     };
     ( $language:expr;;;$region:expr ) => {
-        LanguageTag {
+        $crate::LanguageTag {
             language: Some(stringify!($language).to_owned()),
             extlang: None,
             script: None,
@@ -426,7 +426,7 @@ macro_rules! langtag {
         }
     };
     ( $language:expr;;$script:expr ) => {
-        LanguageTag {
+        $crate::LanguageTag {
             language: Some(stringify!($language).to_owned()),
             extlang: None,
             script: Some(stringify!($script).to_owned()),
@@ -437,7 +437,7 @@ macro_rules! langtag {
         }
     };
     ( $language:expr;;$script:expr;$region:expr ) => {
-        LanguageTag {
+        $crate::LanguageTag {
             language: Some(stringify!($language).to_owned()),
             extlang: None,
             script: Some(stringify!($script).to_owned()),
@@ -448,7 +448,7 @@ macro_rules! langtag {
         }
     };
     ( $language:expr;$extlang:expr) => {
-        LanguageTag {
+        $crate::LanguageTag {
             language: Some(stringify!($language).to_owned()),
             extlang: Some(stringify!($extlang).to_owned()),
             script: None,
@@ -459,7 +459,7 @@ macro_rules! langtag {
         }
     };
     ( $language:expr;$extlang:expr;$script:expr) => {
-        LanguageTag {
+        $crate::LanguageTag {
             language: Some(stringify!($language).to_owned()),
             extlang: Some(stringify!($extlang).to_owned()),
             script: Some(stringify!($script).to_owned()),
@@ -470,7 +470,7 @@ macro_rules! langtag {
         }
     };
     ( $language:expr;$extlang:expr;;$region:expr ) => {
-        LanguageTag {
+        $crate::LanguageTag {
             language: Some(stringify!($language).to_owned()),
             extlang: Some(stringify!($extlang).to_owned()),
             script: None,
@@ -481,7 +481,7 @@ macro_rules! langtag {
         }
     };
     ( $language:expr;$extlang:expr;$script:expr;$region:expr ) => {
-        LanguageTag {
+        $crate::LanguageTag {
             language: Some(stringify!($language).to_owned()),
             extlang: Some(stringify!($extlang).to_owned()),
             script: Some(stringify!($script).to_owned()),
