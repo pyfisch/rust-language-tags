@@ -21,7 +21,7 @@ fn test_extlang_from_str() {
     let a: LanguageTag = "ar-afb".parse().unwrap();
     let mut b: LanguageTag = Default::default();
     b.language = Some("ar".to_owned());
-    b.extlang = Some("afb".to_owned());
+    b.extlangs = vec!["afb".to_owned()];
     assert_eq!(a, b);
 }
 
@@ -30,7 +30,7 @@ fn test_script_from_str() {
     let a: LanguageTag = "ar-afb-Latn".parse().unwrap();
     let mut b: LanguageTag = Default::default();
     b.language = Some("ar".to_owned());
-    b.extlang = Some("afb".to_owned());
+    b.extlangs = vec!["afb".to_owned()];
     b.script = Some("latn".to_owned());
     assert_eq!(a, b);
 }
@@ -77,7 +77,7 @@ fn test_strange_case_from_str() {
     let a: LanguageTag = "SL-AFB-lATN-005-nEdis".parse().unwrap();
     let b = LanguageTag {
         language: Some("sl".to_owned()),
-        extlang: Some("afb".to_owned()),
+        extlangs: vec!["afb".to_owned()],
         script: Some("Latn".to_owned()),
         region: Some("005".to_owned()),
         variants: vec!["nedis".to_owned()],
@@ -137,7 +137,7 @@ fn test_macro() {
     let a1 = langtag!(it);
     let a2 = LanguageTag {
         language: Some("it".to_owned()),
-        extlang: None,
+        extlangs: Vec::new(),
         script: None,
         region: None,
         variants: Vec::new(),
@@ -148,7 +148,7 @@ fn test_macro() {
     let b1 = langtag!(it;;;LY);
     let b2 = LanguageTag {
         language: Some("it".to_owned()),
-        extlang: None,
+        extlangs: Vec::new(),
         script: None,
         region: Some("LY".to_owned()),
         variants: Vec::new(),
@@ -159,7 +159,7 @@ fn test_macro() {
     let c1 = langtag!(it;;Arab;LY);
     let c2 = LanguageTag {
         language: Some("it".to_owned()),
-        extlang: None,
+        extlangs: Vec::new(),
         script: Some("Arab".to_owned()),
         region: Some("LY".to_owned()),
         variants: Vec::new(),

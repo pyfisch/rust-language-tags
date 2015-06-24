@@ -89,8 +89,8 @@ pub enum Error {
     InvalidLanguage,
     /// A subtag may be eight characters in length at maximum.
     SubtagTooLong,
-    /// At maximum three extlangs are allowed, but zero to one extlangs are preferred.
-    TooManyExtlangs,
+    /// At maximum three extlangss are allowed, but zero to one extlangss are preferred.
+    TooManyextlangss,
 }
 
 impl ErrorTrait for Error {
@@ -103,7 +103,7 @@ impl ErrorTrait for Error {
             Error::InvalidSubtag => "A subtag fails to parse, it does not match any other subtags",
             Error::InvalidLanguage => "The given language subtag is invalid",
             Error::SubtagTooLong => "A subtag may be eight characters in length at maximum",
-            Error::TooManyExtlangs => "At maximum three extlangs are allowed",
+            Error::TooManyextlangss => "At maximum three extlangss are allowed",
         }
     }
 }
@@ -165,7 +165,7 @@ pub struct LanguageTag {
     /// selected languages that, for various historical and compatibility
     /// reasons, are closely identified with or tagged using an existing
     /// primary language subtag.
-    pub extlang: Option<String>,
+    pub extlangs: Vec<String>,
     /// Script subtags are used to indicate the script or writing system
     /// variations that distinguish the written forms of a language or its
     /// dialects.
@@ -200,7 +200,7 @@ impl LanguageTag {
     /// all of `en`, `en-GB` ,`en-Arab` and `en-Arab-GB`.
     pub fn matches(&self, other: &LanguageTag) -> bool {
         return matches_option_ignore_ascii_case(&self.language, &other.language) &&
-        matches_option_ignore_ascii_case(&self.extlang, &other.extlang) &&
+        self.extlangs.iter().all(|x| other.extlangs.iter().all(|y| x.eq_ignore_ascii_case(y))) &&
         matches_option_ignore_ascii_case(&self.script, &other.script) &&
         matches_option_ignore_ascii_case(&self.region, &other.region) &&
         self.variants.iter().all(|x| other.variants.iter().all(|y| x.eq_ignore_ascii_case(y))) &&
@@ -222,7 +222,7 @@ impl LanguageTag {
 impl PartialEq for LanguageTag {
     fn eq(&self, other: &LanguageTag) -> bool {
         return eq_option_ignore_ascii_case(&self.language, &other.language) &&
-        eq_option_ignore_ascii_case(&self.extlang, &other.extlang) &&
+        self.extlangs.iter().all(|x| other.extlangs.iter().all(|y| x.eq_ignore_ascii_case(y))) &&
         eq_option_ignore_ascii_case(&self.script, &other.script) &&
         eq_option_ignore_ascii_case(&self.region, &other.region) &&
         self.variants.iter().all(|x| other.variants.iter().all(|y| x.eq_ignore_ascii_case(y))) &&
@@ -244,7 +244,7 @@ impl Default for LanguageTag {
     fn default() -> LanguageTag {
         LanguageTag {
             language: None,
-            extlang: None,
+            extlangs: Vec::new(),
             script: None,
             region: None,
             variants: Vec::new(),
@@ -271,7 +271,7 @@ impl std::str::FromStr for LanguageTag {
         // Handle normal tags
         // The parser has a position from 0 to 6. Bigger positions reepresent the ASCII codes of
         // single character extensions
-        // language-extlang-script-region-variant-extension-privateuse
+        // language-extlangs-script-region-variant-extension-privateuse
         // --- 0 -- -- 1 -- -- 2 - -- 3 - -- 4 -- --- x --- ---- 6 ---
         let mut langtag: LanguageTag = Default::default();
         let mut position: u8 = 0;
@@ -291,24 +291,23 @@ impl std::str::FromStr for LanguageTag {
                 }
                 langtag.language = Some(subtag.to_owned());
                 if subtag.len() < 4 {
-                    // Extlangs are only allowed for short language tags
+                    // extlangss are only allowed for short language tags
                     position = 1;
                 } else {
                     position = 2;
                 }
             } else if position == 1 && subtag.len() == 3 && is_alphabetic(subtag) {
-                // Extlang
-                langtag.extlang = Some(subtag.to_owned());
+                // extlangs
+                langtag.extlangs.push(subtag.to_owned());
                 position = 2;
             } else if position == 2 && subtag.len() == 3 && is_alphabetic(subtag)
-                    && langtag.extlang.is_some() {
-                // Multiple extlangs
-                let x = [langtag.extlang.unwrap(), subtag.to_owned()].connect("-");
-                if x.len() > 11 {
-                    // maximum 3 extlangs
-                    return Err(Error::TooManyExtlangs);
+                    && !langtag.extlangs.is_empty() {
+                // Multiple extlangss
+                if langtag.extlangs.len() > 2 {
+                    // maximum 3 extlangss
+                    return Err(Error::TooManyextlangss);
                 }
-                langtag.extlang = Some(x);
+                langtag.extlangs.push(subtag.to_owned());
             } else if position <= 2 && subtag.len() == 4 && is_alphabetic(subtag) {
                 // Script
                 langtag.script = Some(subtag.to_owned());
@@ -356,7 +355,7 @@ impl fmt::Display for LanguageTag {
         if let Some(ref x) = self.language {
             try!(Display::fmt(x, f))
         }
-        if let Some(ref x) = self.extlang {
+        for x in self.extlangs.iter() {
             try!(write!(f, "-{}", x));
         }
         if let Some(ref x) = self.script {
@@ -406,7 +405,7 @@ macro_rules! langtag {
     ( $language:expr ) => {
         $crate::LanguageTag {
             language: Some(stringify!($language).to_owned()),
-            extlang: None,
+            extlangs: Vec::new(),
             script: None,
             region: None,
             variants: Vec::new(),
@@ -417,7 +416,7 @@ macro_rules! langtag {
     ( $language:expr;;;$region:expr ) => {
         $crate::LanguageTag {
             language: Some(stringify!($language).to_owned()),
-            extlang: None,
+            extlangs: Vec::new(),
             script: None,
             region: Some(stringify!($region).to_owned()),
             variants: Vec::new(),
@@ -428,7 +427,7 @@ macro_rules! langtag {
     ( $language:expr;;$script:expr ) => {
         $crate::LanguageTag {
             language: Some(stringify!($language).to_owned()),
-            extlang: None,
+            extlangs: Vec::new(),
             script: Some(stringify!($script).to_owned()),
             region: None,
             variants: Vec::new(),
@@ -439,7 +438,7 @@ macro_rules! langtag {
     ( $language:expr;;$script:expr;$region:expr ) => {
         $crate::LanguageTag {
             language: Some(stringify!($language).to_owned()),
-            extlang: None,
+            extlangs: Vec::new(),
             script: Some(stringify!($script).to_owned()),
             region: Some(stringify!($region).to_owned()),
             variants: Vec::new(),
@@ -447,10 +446,10 @@ macro_rules! langtag {
             privateuse: Vec::new(),
         }
     };
-    ( $language:expr;$extlang:expr) => {
+    ( $language:expr;$extlangs:expr) => {
         $crate::LanguageTag {
             language: Some(stringify!($language).to_owned()),
-            extlang: Some(stringify!($extlang).to_owned()),
+            extlangs: vec![stringify!($extlangs).to_owned()],
             script: None,
             region: None,
             variants: Vec::new(),
@@ -458,10 +457,10 @@ macro_rules! langtag {
             privateuse: Vec::new(),
         }
     };
-    ( $language:expr;$extlang:expr;$script:expr) => {
+    ( $language:expr;$extlangs:expr;$script:expr) => {
         $crate::LanguageTag {
             language: Some(stringify!($language).to_owned()),
-            extlang: Some(stringify!($extlang).to_owned()),
+            extlangs: vec![stringify!($extlangs).to_owned()],
             script: Some(stringify!($script).to_owned()),
             region: None,
             variants: Vec::new(),
@@ -469,10 +468,10 @@ macro_rules! langtag {
             privateuse: Vec::new(),
         }
     };
-    ( $language:expr;$extlang:expr;;$region:expr ) => {
+    ( $language:expr;$extlangs:expr;;$region:expr ) => {
         $crate::LanguageTag {
             language: Some(stringify!($language).to_owned()),
-            extlang: Some(stringify!($extlang).to_owned()),
+            extlangs: vec![stringify!($extlangs).to_owned()],
             script: None,
             region: Some(stringify!($region).to_owned()),
             variants: Vec::new(),
@@ -480,10 +479,10 @@ macro_rules! langtag {
             privateuse: Vec::new(),
         }
     };
-    ( $language:expr;$extlang:expr;$script:expr;$region:expr ) => {
+    ( $language:expr;$extlangs:expr;$script:expr;$region:expr ) => {
         $crate::LanguageTag {
             language: Some(stringify!($language).to_owned()),
-            extlang: Some(stringify!($extlang).to_owned()),
+            extlangs: vec![stringify!($extlangs).to_owned()],
             script: Some(stringify!($script).to_owned()),
             region: Some(stringify!($region).to_owned()),
             variants: Vec::new(),
