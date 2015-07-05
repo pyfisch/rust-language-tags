@@ -102,6 +102,15 @@ fn test_match() {
 }
 
 #[test]
+fn test_match_all() {
+    let de_de: LanguageTag = "de-DE".parse().unwrap();
+    let crazy: LanguageTag = "GDJ-nHYa-bw-X-ke-rohH5GfS-LdJKsGVe".parse().unwrap();
+    let wildcard: LanguageTag = Default::default();
+    assert!(wildcard.matches(&de_de));
+    assert!(wildcard.matches(&crazy));
+}
+
+#[test]
 fn test_klingon() {
     let a: LanguageTag = "i-klingon".parse().unwrap();
     let mut b: LanguageTag = Default::default();
@@ -130,6 +139,25 @@ fn test_format() {
     assert_eq!(format!("{}", x), "HkgnmerM-x-e5-zf-VdDjcpz-1V6");
     let y: LanguageTag = "MgxQa-ywEp-8lcW-7bvT-h-dP1Md-0h7-0Z3ir".parse().unwrap();
     assert_eq!(format!("{}", y), "MgxQa-ywEp-8lcW-7bvT-h-dP1Md-0h7-0Z3ir");
+}
+
+#[test]
+fn test_cmp() {
+    assert_eq!(langtag!(dE;;AraB;lY), langtag!(DE;;aRaB;LY));
+    assert!(langtag!(dE;;AraB;lY).matches(&langtag!(DE;;aRaB;LY)));
+    let mut extensions = BTreeMap::new();
+    extensions.insert(75 /*K*/, vec!["foo".to_owned(), "bar".to_owned()]);
+    extensions.insert(112 /*p*/, vec!["spam".to_owned(), "eggs".to_owned()]);
+    let langtag = LanguageTag {
+        language: Some("it".to_owned()),
+        extlangs: Vec::new(),
+        script: None,
+        region: None,
+        variants: Vec::new(),
+        extensions: extensions,
+        privateuse: Vec::new(),
+    };
+    assert_eq!(langtag, langtag);
 }
 
 #[test]

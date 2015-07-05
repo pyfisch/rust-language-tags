@@ -1,4 +1,5 @@
 #![deny(missing_docs)]
+#![cfg_attr(test, deny(warnings))]
 
 //! Language tags can be used identify human languages, scripts e.g. Latin script, countries and
 //! other regions.
@@ -33,28 +34,24 @@
 //! ```
 //!
 //! You can check for equality, but more often you should test if two tags match.
-//! In this example we check if the resource in German language is suitable for
-//! a user from Austria. While people speaking Austrian German normally understand
-//! standard German the opposite is not always true. So the resource can be presented
-//! to the user but if the resource was in `de-AT` and a user asked for a representation
-//! in `de` the request should be rejected.
 //!
 //! ```rust
 //! use language_tags::LanguageTag;
-//! let mut langtag1: LanguageTag = Default::default();
-//! langtag1.language = Some("de".to_owned());
-//! langtag1.region = Some("AT".to_owned());
-//! let mut langtag2: LanguageTag = Default::default();
-//! langtag2.language = Some("de".to_owned());
-//! assert!(langtag2.matches(&langtag1));
+//! let mut langtag_server: LanguageTag = Default::default();
+//! langtag_server.language = Some("de".to_owned());
+//! langtag_server.region = Some("AT".to_owned());
+//! let mut langtag_user: LanguageTag = Default::default();
+//! langtag_user.language = Some("de".to_owned());
+//! assert!(langtag_user.matches(&langtag_server));
 //! ```
 //!
 //! There is also the `langtag!` macro for creating language tags.
 
 use std::ascii::AsciiExt;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error as ErrorTrait;
 use std::fmt::{self, Display, Formatter};
+use std::iter::FromIterator;
 use std::str::FromStr;
 
 fn is_alphabetic(s: &str) -> bool {
@@ -90,7 +87,7 @@ pub enum Error {
     /// A subtag may be eight characters in length at maximum.
     SubtagTooLong,
     /// At maximum three extlangss are allowed, but zero to one extlangss are preferred.
-    TooManyextlangss,
+    TooManyExtlangs,
 }
 
 impl ErrorTrait for Error {
@@ -103,7 +100,7 @@ impl ErrorTrait for Error {
             Error::InvalidSubtag => "A subtag fails to parse, it does not match any other subtags",
             Error::InvalidLanguage => "The given language subtag is invalid",
             Error::SubtagTooLong => "A subtag may be eight characters in length at maximum",
-            Error::TooManyextlangss => "At maximum three extlangss are allowed",
+            Error::TooManyExtlangs => "At maximum three extlangss are allowed",
         }
     }
 }
@@ -193,49 +190,75 @@ pub struct LanguageTag {
 }
 
 impl LanguageTag {
-    /// Matches language tags like described in
-    /// [RFC4647#Extended filtering](https://tools.ietf.org/html/rfc4647#section-3.3.2)
+    /// Matches language tags. The first language acts as a language range, the second one is used
+    /// as a normal language tag. None fields in the language range are ignored. If the language
+    /// tag has more extlangs than the range these extlangs are ignored. Matches are
+    /// case-insensitive. `*` in language ranges are represented using `None` values. The language
+    /// range `*` that matches language tags is created by the default language tag:
+    /// `let wildcard: LanguageTag = Default::default();.`
     ///
-    /// For example `en-GB` matches only `en-GB` and `en-Arab-GB` but not `en`. While `en` matches
-    /// all of `en`, `en-GB` ,`en-Arab` and `en-Arab-GB`.
+    /// For example the range `en-GB` matches only `en-GB` and `en-Arab-GB` but not `en`.
+    /// The range `en` matches all language tags starting with `en` including `en`, `en-GB`,
+    /// `en-Arab` and `en-Arab-GB`.
+    ///
+    /// # Panics
+    /// If the language range has extensions or private use tags.
+    ///
+    /// # Examples
+    /// ```
+    /// # #[macro_use] extern crate language_tags;
+    /// # fn main() {
+    /// let language_range1 = langtag!(it);
+    /// let language_tag1 = langtag!(de);
+    /// let language_tag2 = langtag!(it;;;CH);
+    /// assert!(!language_range1.matches(&language_tag1));
+    /// assert!(language_range1.matches(&language_tag2));
+    ///
+    /// let language_range2 = langtag!(es;;;BR);
+    /// let language_tag3 = langtag!(es);
+    /// assert!(!language_range2.matches(&language_tag3));
+    /// # }
+    /// ```
     pub fn matches(&self, other: &LanguageTag) -> bool {
-        return matches_option_ignore_ascii_case(&self.language, &other.language) &&
+        assert!(self.extensions.is_empty());
+        assert!(self.privateuse.is_empty());
+        return matches_option(&self.language, &other.language) &&
         self.extlangs.iter().all(|x| other.extlangs.iter().all(|y| x.eq_ignore_ascii_case(y))) &&
-        matches_option_ignore_ascii_case(&self.script, &other.script) &&
-        matches_option_ignore_ascii_case(&self.region, &other.region) &&
-        self.variants.iter().all(|x| other.variants.iter().all(|y| x.eq_ignore_ascii_case(y))) &&
-        self.privateuse.len() == other.privateuse.len() &&
-        self.privateuse.iter().zip(other.privateuse.iter()).all(|(x, y)| x.eq_ignore_ascii_case(y));
+        matches_option(&self.script, &other.script) &&
+        matches_option(&self.region, &other.region);
 
-        fn matches_option_ignore_ascii_case(a: &Option<String>, b: &Option<String>) -> bool {
+        fn matches_option(a: &Option<String>, b: &Option<String>) -> bool {
             match (a.is_some(), b.is_some()) {
                 (true, true) => a.as_ref().unwrap().eq_ignore_ascii_case(b.as_ref().unwrap()),
-                (false, false) => true,
                 (true, false) => false,
-                (false, true) => true,
+                (false, _) => true,
             }
-
         }
     }
 }
 
 impl PartialEq for LanguageTag {
     fn eq(&self, other: &LanguageTag) -> bool {
-        return eq_option_ignore_ascii_case(&self.language, &other.language) &&
-        self.extlangs.iter().all(|x| other.extlangs.iter().all(|y| x.eq_ignore_ascii_case(y))) &&
-        eq_option_ignore_ascii_case(&self.script, &other.script) &&
-        eq_option_ignore_ascii_case(&self.region, &other.region) &&
+        return eq_option(&self.language, &other.language) &&
+        eq_vec(&self.extlangs, &other.extlangs) &&
+        eq_option(&self.script, &other.script) &&
+        eq_option(&self.region, &other.region) &&
         self.variants.iter().all(|x| other.variants.iter().all(|y| x.eq_ignore_ascii_case(y))) &&
-        self.privateuse.len() == other.privateuse.len() &&
-        self.privateuse.iter().zip(other.privateuse.iter()).all(|(x, y)| x.eq_ignore_ascii_case(y));
+        BTreeSet::from_iter(&self.extensions) == BTreeSet::from_iter(&other.extensions) &&
+        self.extensions.keys().all(|a| eq_vec(self.extensions.get(a).unwrap(),
+                                              other.extensions.get(a).unwrap())) &&
+        eq_vec(&self.privateuse, &other.privateuse);
 
-        fn eq_option_ignore_ascii_case(a: &Option<String>, b: &Option<String>) -> bool {
+        fn eq_option(a: &Option<String>, b: &Option<String>) -> bool {
             match (a.is_some(), b.is_some()) {
                 (true, true) => a.as_ref().unwrap().eq_ignore_ascii_case(b.as_ref().unwrap()),
                 (false, false) => true,
                 _ => false,
             }
-
+        }
+        fn eq_vec(a: &Vec<String>, b: &Vec<String>) -> bool {
+            a.len() == b.len() &&
+            a.iter().zip(b.iter()).all(|(x, y)| x.eq_ignore_ascii_case(y))
         }
     }
 }
@@ -305,7 +328,7 @@ impl std::str::FromStr for LanguageTag {
                 // Multiple extlangss
                 if langtag.extlangs.len() > 2 {
                     // maximum 3 extlangss
-                    return Err(Error::TooManyextlangss);
+                    return Err(Error::TooManyExtlangs);
                 }
                 langtag.extlangs.push(subtag.to_owned());
             } else if position <= 2 && subtag.len() == 4 && is_alphabetic(subtag) {
