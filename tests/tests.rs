@@ -198,6 +198,23 @@ fn test_macro() {
 }
 
 #[test]
+fn test_private_tag() {
+    let mut tag: LanguageTag = Default::default();
+    tag.privateuse = vec!["foo".to_owned(), "bar".to_owned()];
+    assert_eq!(format!("{}", tag), "x-foo-bar");
+}
+
+#[test]
+fn test_eq() {
+    let mut tag1: LanguageTag = Default::default();
+    tag1.language = Some("zh".to_owned());
+    let mut tag2: LanguageTag = Default::default();
+    tag2.language = Some("zh".to_owned());
+    tag2.script = Some("Latn".to_owned());
+    assert!(tag1 != tag2);
+}
+
+#[test]
 fn test_wellformed_tags() {
     // Source: http://www.langtag.net/test-suites/well-formed-tags.txt
     let tags = vec![
