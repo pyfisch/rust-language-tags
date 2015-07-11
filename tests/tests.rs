@@ -205,6 +205,14 @@ fn test_private_tag() {
 }
 
 #[test]
+fn test_grandfathered_tag() {
+    let tag_irregular: LanguageTag = "i-klingon".parse().unwrap();
+    assert_eq!(tag_irregular.language.unwrap(), "i-klingon");
+    let tag_regular: LanguageTag =  "zh-hakka".parse().unwrap();
+    assert_eq!(tag_regular.language.unwrap(), "zh-hakka");
+}
+
+#[test]
 fn test_eq() {
     let mut tag1: LanguageTag = Default::default();
     tag1.language = Some("zh".to_owned());

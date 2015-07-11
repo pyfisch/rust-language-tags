@@ -86,7 +86,7 @@ pub enum Error {
     InvalidLanguage,
     /// A subtag may be eight characters in length at maximum.
     SubtagTooLong,
-    /// At maximum three extlangss are allowed, but zero to one extlangss are preferred.
+    /// At maximum three extlangs are allowed, but zero to one extlangs are preferred.
     TooManyExtlangs,
 }
 
@@ -100,7 +100,7 @@ impl ErrorTrait for Error {
             Error::InvalidSubtag => "A subtag fails to parse, it does not match any other subtags",
             Error::InvalidLanguage => "The given language subtag is invalid",
             Error::SubtagTooLong => "A subtag may be eight characters in length at maximum",
-            Error::TooManyExtlangs => "At maximum three extlangss are allowed",
+            Error::TooManyExtlangs => "At maximum three extlangs are allowed",
         }
     }
 }
@@ -153,7 +153,7 @@ pub const GRANDFATHERED_REGULAR: [&'static str; 9] = [
 /// communication.  This includes constructed and artificial languages
 /// but excludes languages not intended primarily for human
 /// communication, such as programming languages.
-#[derive(Debug, Eq, Clone)]
+#[derive(Debug, Default, Eq, Clone)]
 pub struct LanguageTag {
     /// Language subtags are used to indicate the language, ignoring all
     /// other aspects such as script, region or spefic invariants.
@@ -208,71 +208,60 @@ impl LanguageTag {
     /// ```
     /// # #[macro_use] extern crate language_tags;
     /// # fn main() {
-    /// let language_range1 = langtag!(it);
-    /// let language_tag1 = langtag!(de);
-    /// let language_tag2 = langtag!(it;;;CH);
-    /// assert!(!language_range1.matches(&language_tag1));
-    /// assert!(language_range1.matches(&language_tag2));
+    /// let range_italian = langtag!(it);
+    /// let tag_german = langtag!(de);
+    /// let tag_italian_switzerland = langtag!(it;;;CH);
+    /// assert!(!range_italian.matches(&tag_german));
+    /// assert!(range_italian.matches(&tag_italian_switzerland));
     ///
-    /// let language_range2 = langtag!(es;;;BR);
-    /// let language_tag3 = langtag!(es);
-    /// assert!(!language_range2.matches(&language_tag3));
+    /// let range_spanish_brazil = langtag!(es;;;BR);
+    /// let tag_spanish = langtag!(es);
+    /// assert!(!range_spanish_brazil.matches(&tag_spanish));
     /// # }
     /// ```
     pub fn matches(&self, other: &LanguageTag) -> bool {
         assert!(self.extensions.is_empty());
         assert!(self.privateuse.is_empty());
-        return matches_option(&self.language, &other.language) &&
-        self.extlangs.iter().all(|x| other.extlangs.iter().all(|y| x.eq_ignore_ascii_case(y))) &&
-        matches_option(&self.script, &other.script) &&
-        matches_option(&self.region, &other.region);
+        return matches_option(&self.language, &other.language)
+            && matches_vec(&self.extlangs, &other.extlangs)
+            && matches_option(&self.script, &other.script)
+            && matches_option(&self.region, &other.region)
+            && matches_vec(&self.variants, &other.variants);
 
         fn matches_option(a: &Option<String>, b: &Option<String>) -> bool {
-            match (a.is_some(), b.is_some()) {
-                (true, true) => a.as_ref().unwrap().eq_ignore_ascii_case(b.as_ref().unwrap()),
-                (true, false) => false,
-                (false, _) => true,
+            match (a, b) {
+                (&Some(ref a), &Some(ref b)) => a.eq_ignore_ascii_case(b),
+                (&None, _) => true,
+                (_, &None) => false,
             }
+        }
+        fn matches_vec(a: &Vec<String>, b: &Vec<String>) -> bool {
+            a.iter().zip(b.iter()).all(|(x, y)| x.eq_ignore_ascii_case(y))
         }
     }
 }
 
 impl PartialEq for LanguageTag {
     fn eq(&self, other: &LanguageTag) -> bool {
-        return eq_option(&self.language, &other.language) &&
-        eq_vec(&self.extlangs, &other.extlangs) &&
-        eq_option(&self.script, &other.script) &&
-        eq_option(&self.region, &other.region) &&
-        self.variants.iter().all(|x| other.variants.iter().all(|y| x.eq_ignore_ascii_case(y))) &&
-        BTreeSet::from_iter(&self.extensions) == BTreeSet::from_iter(&other.extensions) &&
-        self.extensions.keys().all(|a| eq_vec(self.extensions.get(a).unwrap(),
-                                              other.extensions.get(a).unwrap())) &&
-        eq_vec(&self.privateuse, &other.privateuse);
+        return eq_option(&self.language, &other.language)
+            && eq_vec(&self.extlangs, &other.extlangs)
+            && eq_option(&self.script, &other.script)
+            && eq_option(&self.region, &other.region)
+            && eq_vec(&self.variants, &other.variants)
+            && BTreeSet::from_iter(&self.extensions) == BTreeSet::from_iter(&other.extensions)
+            && self.extensions.keys().all(|a|
+                eq_vec(self.extensions.get(a).unwrap(), other.extensions.get(a).unwrap()))
+            && eq_vec(&self.privateuse, &other.privateuse);
 
         fn eq_option(a: &Option<String>, b: &Option<String>) -> bool {
-            match (a.is_some(), b.is_some()) {
-                (true, true) => a.as_ref().unwrap().eq_ignore_ascii_case(b.as_ref().unwrap()),
-                (false, false) => true,
+            match (a, b) {
+                (&Some(ref a), &Some(ref b)) => a.eq_ignore_ascii_case(b),
+                (&None, &None) => true,
                 _ => false,
             }
         }
         fn eq_vec(a: &Vec<String>, b: &Vec<String>) -> bool {
-            a.len() == b.len() &&
-            a.iter().zip(b.iter()).all(|(x, y)| x.eq_ignore_ascii_case(y))
-        }
-    }
-}
-
-impl Default for LanguageTag {
-    fn default() -> LanguageTag {
-        LanguageTag {
-            language: None,
-            extlangs: Vec::new(),
-            script: None,
-            region: None,
-            variants: Vec::new(),
-            extensions: BTreeMap::new(),
-            privateuse: Vec::new(),
+            a.len() == b.len() && a.iter().zip(b.iter()).all(|(x, y)| x.eq_ignore_ascii_case(y))
         }
     }
 }
@@ -284,19 +273,19 @@ impl std::str::FromStr for LanguageTag {
         if !is_alphanumeric_or_dash(t)  {
             return Err(Error::ForbiddenChar);
         }
+        let mut langtag: LanguageTag = Default::default();
         // Handle grandfathered tags
-        if let Some(tag) = GRANDFATHERED_IRREGULAR.iter().find(|x| x.eq_ignore_ascii_case(t)) {
-            return Ok(simple_langtag(tag))
-        }
-        if let Some(tag) = GRANDFATHERED_REGULAR.iter().find(|x| x.eq_ignore_ascii_case(t)) {
-            return Ok(simple_langtag(tag))
+        if let Some(tag) = GRANDFATHERED_IRREGULAR.iter()
+                .chain(GRANDFATHERED_REGULAR.iter())
+                .find(|x| x.eq_ignore_ascii_case(t)) {
+            langtag.language = Some((*tag).to_owned());
+            return Ok(langtag)
         }
         // Handle normal tags
         // The parser has a position from 0 to 6. Bigger positions reepresent the ASCII codes of
         // single character extensions
         // language-extlangs-script-region-variant-extension-privateuse
         // --- 0 -- -- 1 -- -- 2 - -- 3 - -- 4 -- --- x --- ---- 6 ---
-        let mut langtag: LanguageTag = Default::default();
         let mut position: u8 = 0;
         for subtag in t.split('-') {
             if subtag.len() > 8 {
@@ -314,7 +303,7 @@ impl std::str::FromStr for LanguageTag {
                 }
                 langtag.language = Some(subtag.to_owned());
                 if subtag.len() < 4 {
-                    // extlangss are only allowed for short language tags
+                    // extlangs are only allowed for short language tags
                     position = 1;
                 } else {
                     position = 2;
@@ -325,9 +314,9 @@ impl std::str::FromStr for LanguageTag {
                 position = 2;
             } else if position == 2 && subtag.len() == 3 && is_alphabetic(subtag)
                     && !langtag.extlangs.is_empty() {
-                // Multiple extlangss
+                // Multiple extlangs
                 if langtag.extlangs.len() > 2 {
-                    // maximum 3 extlangss
+                    // maximum 3 extlangs
                     return Err(Error::TooManyExtlangs);
                 }
                 langtag.extlangs.push(subtag.to_owned());
@@ -364,12 +353,6 @@ impl std::str::FromStr for LanguageTag {
             return Err(Error::EmptyPrivateUse);
         }
         return Ok(langtag);
-
-        fn simple_langtag(s: &str) -> LanguageTag {
-            let mut x: LanguageTag = Default::default();
-            x.language = Some(s.to_owned());
-            x
-        }
     }
 }
 
