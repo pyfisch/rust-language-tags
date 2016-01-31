@@ -1,5 +1,7 @@
 #![deny(missing_docs)]
 #![cfg_attr(test, deny(warnings))]
+#![cfg_attr(feature = "heap_size", feature(custom_derive, plugin))]
+#![cfg_attr(feature = "heap_size", plugin(heapsize_plugin))]
 
 //! Language tags can be used identify human languages, scripts e.g. Latin script, countries and
 //! other regions.
@@ -46,6 +48,9 @@
 //! ```
 //!
 //! There is also the `langtag!` macro for creating language tags.
+
+#[cfg(feature = "heap_size")]
+extern crate heapsize;
 
 use std::ascii::AsciiExt;
 use std::cmp::Ordering;
@@ -212,6 +217,7 @@ const DEPRECATED_REGION: [(&'static str, &'static str); 6] = [("BU", "MM"),
 /// but excludes languages not intended primarily for human
 /// communication, such as programming languages.
 #[derive(Debug, Default, Eq, Clone)]
+#[cfg_attr(feature = "heap_size", derive(HeapSizeOf))]
 pub struct LanguageTag {
     /// Language subtags are used to indicate the language, ignoring all
     /// other aspects such as script, region or spefic invariants.
