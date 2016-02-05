@@ -56,9 +56,8 @@ use std::ascii::AsciiExt;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error as ErrorTrait;
-use std::fmt::{self, Display, Formatter};
+use std::fmt::{self, Display};
 use std::iter::FromIterator;
-use std::str::FromStr;
 
 fn is_alphabetic(s: &str) -> bool {
     s.chars().all(|x| x >= 'A' && x <= 'Z' || x >= 'a' && x <= 'z')
@@ -122,92 +121,93 @@ pub type Result<T> = ::std::result::Result<T, Error>;
 
 /// Contains all grandfathered tags.
 pub const GRANDFATHERED: [(&'static str, Option<&'static str>); 26] = [("art-lojban", Some("jbo")),
- ("cel-gaulish", None),
- ("en-GB-oed", Some("en-GB-oxendict")),
- ("i-ami", Some("ami")),
- ("i-bnn", Some("bnn")),
- ("i-default", None),
- ("i-enochian", None),
- ("i-hak", Some("hak")),
- ("i-klingon", Some("tlh")),
- ("i-lux", Some("lb")),
- ("i-mingo", None),
- ("i-navajo", Some("nv")),
- ("i-pwn", Some("pwn")),
- ("i-tao", Some("tao")),
- ("i-tay", Some("tay")),
- ("i-tsu", Some("tsu")),
- ("no-bok", Some("nb")),
- ("no-nyn", Some("nn")),
- ("sgn-BE-FR", Some("sfb")),
- ("sgn-BE-NL", Some("vgt")),
- ("sgn-CH-DE", Some("sgg")),
- ("zh-guoyu", Some("cmn")),
- ("zh-hakka", Some("hak")),
- ("zh-min", None),
- ("zh-min-nan", Some("nan")),
- ("zh-xiang", Some("hsn"))];
+                                                                       ("cel-gaulish", None),
+                                                                       ("en-GB-oed",
+                                                                        Some("en-GB-oxendict")),
+                                                                       ("i-ami", Some("ami")),
+                                                                       ("i-bnn", Some("bnn")),
+                                                                       ("i-default", None),
+                                                                       ("i-enochian", None),
+                                                                       ("i-hak", Some("hak")),
+                                                                       ("i-klingon", Some("tlh")),
+                                                                       ("i-lux", Some("lb")),
+                                                                       ("i-mingo", None),
+                                                                       ("i-navajo", Some("nv")),
+                                                                       ("i-pwn", Some("pwn")),
+                                                                       ("i-tao", Some("tao")),
+                                                                       ("i-tay", Some("tay")),
+                                                                       ("i-tsu", Some("tsu")),
+                                                                       ("no-bok", Some("nb")),
+                                                                       ("no-nyn", Some("nn")),
+                                                                       ("sgn-BE-FR", Some("sfb")),
+                                                                       ("sgn-BE-NL", Some("vgt")),
+                                                                       ("sgn-CH-DE", Some("sgg")),
+                                                                       ("zh-guoyu", Some("cmn")),
+                                                                       ("zh-hakka", Some("hak")),
+                                                                       ("zh-min", None),
+                                                                       ("zh-min-nan", Some("nan")),
+                                                                       ("zh-xiang", Some("hsn"))];
 
 const DEPRECATED_LANGUAGE: [(&'static str, &'static str); 53] = [("in", "id"),
- ("iw", "he"),
- ("ji", "yi"),
- ("jw", "jv"),
- ("mo", "ro"),
- ("aam", "aas"),
- ("adp", "dz"),
- ("aue", "ktz"),
- ("ayx", "nun"),
- ("bjd", "drl"),
- ("ccq", "rki"),
- ("cjr", "mom"),
- ("cka", "cmr"),
- ("cmk", "xch"),
- ("drh", "khk"),
- ("drw", "prs"),
- ("gav", "dev"),
- ("gfx", "vaj"),
- ("gti", "nyc"),
- ("hrr", "jal"),
- ("ibi", "opa"),
- ("ilw", "gal"),
- ("kgh", "kml"),
- ("koj", "kwv"),
- ("kwq", "yam"),
- ("kxe", "tvd"),
- ("lii", "raq"),
- ("lmm", "rmx"),
- ("meg", "cir"),
- ("mst", "mry"),
- ("mwj", "vaj"),
- ("myt", "mry"),
- ("nnx", "ngv"),
- ("oun", "vaj"),
- ("pcr", "adx"),
- ("pmu", "phr"),
- ("ppr", "lcq"),
- ("puz", "pub"),
- ("sca", "hle"),
- ("thx", "oyb"),
- ("tie", "ras"),
- ("tkk", "twm"),
- ("tlw", "weo"),
- ("tnf", "prs"),
- ("tsf", "taj"),
- ("uok", "ema"),
- ("xia", "acn"),
- ("xsj", "suj"),
- ("ybd", "rki"),
- ("yma", "lrr"),
- ("ymt", "mtm"),
- ("yos", "zom"),
- ("yuu", "yug")];
+                                                                 ("iw", "he"),
+                                                                 ("ji", "yi"),
+                                                                 ("jw", "jv"),
+                                                                 ("mo", "ro"),
+                                                                 ("aam", "aas"),
+                                                                 ("adp", "dz"),
+                                                                 ("aue", "ktz"),
+                                                                 ("ayx", "nun"),
+                                                                 ("bjd", "drl"),
+                                                                 ("ccq", "rki"),
+                                                                 ("cjr", "mom"),
+                                                                 ("cka", "cmr"),
+                                                                 ("cmk", "xch"),
+                                                                 ("drh", "khk"),
+                                                                 ("drw", "prs"),
+                                                                 ("gav", "dev"),
+                                                                 ("gfx", "vaj"),
+                                                                 ("gti", "nyc"),
+                                                                 ("hrr", "jal"),
+                                                                 ("ibi", "opa"),
+                                                                 ("ilw", "gal"),
+                                                                 ("kgh", "kml"),
+                                                                 ("koj", "kwv"),
+                                                                 ("kwq", "yam"),
+                                                                 ("kxe", "tvd"),
+                                                                 ("lii", "raq"),
+                                                                 ("lmm", "rmx"),
+                                                                 ("meg", "cir"),
+                                                                 ("mst", "mry"),
+                                                                 ("mwj", "vaj"),
+                                                                 ("myt", "mry"),
+                                                                 ("nnx", "ngv"),
+                                                                 ("oun", "vaj"),
+                                                                 ("pcr", "adx"),
+                                                                 ("pmu", "phr"),
+                                                                 ("ppr", "lcq"),
+                                                                 ("puz", "pub"),
+                                                                 ("sca", "hle"),
+                                                                 ("thx", "oyb"),
+                                                                 ("tie", "ras"),
+                                                                 ("tkk", "twm"),
+                                                                 ("tlw", "weo"),
+                                                                 ("tnf", "prs"),
+                                                                 ("tsf", "taj"),
+                                                                 ("uok", "ema"),
+                                                                 ("xia", "acn"),
+                                                                 ("xsj", "suj"),
+                                                                 ("ybd", "rki"),
+                                                                 ("yma", "lrr"),
+                                                                 ("ymt", "mtm"),
+                                                                 ("yos", "zom"),
+                                                                 ("yuu", "yug")];
 
 const DEPRECATED_REGION: [(&'static str, &'static str); 6] = [("BU", "MM"),
- ("DD", "DE"),
- ("FX", "FR"),
- ("TP", "TL"),
- ("YD", "YE"),
- ("ZR", "CD")];
+                                                              ("DD", "DE"),
+                                                              ("FX", "FR"),
+                                                              ("TP", "TL"),
+                                                              ("YD", "YE"),
+                                                              ("ZR", "CD")];
 
 /// A language tag as described in [BCP47](http://tools.ietf.org/html/bcp47).
 ///
@@ -284,13 +284,6 @@ impl LanguageTag {
     /// # }
     /// ```
     pub fn matches(&self, other: &LanguageTag) -> bool {
-        assert!(self.is_language_range());
-        return matches_option(&self.language, &other.language) &&
-               matches_vec(&self.extlangs, &other.extlangs) &&
-               matches_option(&self.script, &other.script) &&
-               matches_option(&self.region, &other.region) &&
-               matches_vec(&self.variants, &other.variants);
-
         fn matches_option(a: &Option<String>, b: &Option<String>) -> bool {
             match (a, b) {
                 (&Some(ref a), &Some(ref b)) => a.eq_ignore_ascii_case(b),
@@ -298,9 +291,15 @@ impl LanguageTag {
                 (_, &None) => false,
             }
         }
-        fn matches_vec(a: &Vec<String>, b: &Vec<String>) -> bool {
+        fn matches_vec(a: &[String], b: &[String]) -> bool {
             a.iter().zip(b.iter()).all(|(x, y)| x.eq_ignore_ascii_case(y))
         }
+        assert!(self.is_language_range());
+        matches_option(&self.language, &other.language) &&
+        matches_vec(&self.extlangs, &other.extlangs) &&
+        matches_option(&self.script, &other.script) &&
+        matches_option(&self.region, &other.region) &&
+        matches_vec(&self.variants, &other.variants)
     }
 
     /// Checks if it is a language range, meaning that there are no extension and privateuse tags.
@@ -308,18 +307,27 @@ impl LanguageTag {
         self.extensions.is_empty() && self.privateuse.is_empty()
     }
 
-    /// Todo
+    /// Returns the canonical version of the language tag.
+    ///
+    /// It currently applies the following steps:
+    ///
+    /// * Grandfathered tags are replaced with the canonical version if possible.
+    /// * Extension languages are promoted to primary language.
+    /// * Deprecated languages are replaced with modern equivalents.
+    /// * Deprecated regions are replaced with new country names.
+    /// * The `heploc` variant is replaced with `alalc97`.
+    ///
+    /// The returned language tags may not be completly canonical and they are
+    /// not validated.
     pub fn canonicalize(&self) -> LanguageTag {
-        // Canonicalize grandfathered tags
         if let Some(ref language) = self.language {
             if let Some(&(_, Some(tag))) = GRANDFATHERED.iter().find(|&&(x, _)| {
                 x.eq_ignore_ascii_case(&language)
             }) {
-                return tag.parse().unwrap()
+                return tag.parse().expect("GRANDFATHERED list must contain only valid tags.");
             }
         }
         let mut tag = self.clone();
-        // Canonicalize extlangs
         if !self.extlangs.is_empty() {
             tag.language = Some(self.extlangs[0].clone());
             tag.extlangs = Vec::new();
@@ -354,17 +362,6 @@ impl LanguageTag {
 
 impl PartialEq for LanguageTag {
     fn eq(&self, other: &LanguageTag) -> bool {
-        return eq_option(&self.language, &other.language) &&
-               eq_vec(&self.extlangs, &other.extlangs) &&
-               eq_option(&self.script, &other.script) &&
-               eq_option(&self.region, &other.region) &&
-               eq_vec(&self.variants, &other.variants) &&
-               BTreeSet::from_iter(&self.extensions) == BTreeSet::from_iter(&other.extensions) &&
-               self.extensions.keys().all(|a| {
-            eq_vec(self.extensions.get(a).unwrap(),
-                   other.extensions.get(a).unwrap())
-        }) && eq_vec(&self.privateuse, &other.privateuse);
-
         fn eq_option(a: &Option<String>, b: &Option<String>) -> bool {
             match (a, b) {
                 (&Some(ref a), &Some(ref b)) => a.eq_ignore_ascii_case(b),
@@ -372,10 +369,79 @@ impl PartialEq for LanguageTag {
                 _ => false,
             }
         }
-        fn eq_vec(a: &Vec<String>, b: &Vec<String>) -> bool {
+        fn eq_vec(a: &[String], b: &[String]) -> bool {
             a.len() == b.len() && a.iter().zip(b.iter()).all(|(x, y)| x.eq_ignore_ascii_case(y))
         }
+        eq_option(&self.language, &other.language) && eq_vec(&self.extlangs, &other.extlangs) &&
+        eq_option(&self.script, &other.script) &&
+        eq_option(&self.region, &other.region) && eq_vec(&self.variants, &other.variants) &&
+        BTreeSet::from_iter(&self.extensions) == BTreeSet::from_iter(&other.extensions) &&
+        self.extensions.keys().all(|a| eq_vec(&self.extensions[a], &other.extensions[a])) &&
+        eq_vec(&self.privateuse, &other.privateuse)
     }
+}
+
+/// Handles normal tags.
+/// The parser has a position from 0 to 6. Bigger positions reepresent the ASCII codes of
+/// single character extensions
+/// language-extlangs-script-region-variant-extension-privateuse
+/// --- 0 -- -- 1 -- -- 2 - -- 3 - -- 4 -- --- x --- ---- 6 ---
+fn parse_language_tag(langtag: &mut LanguageTag, t: &str) -> Result<u8> {
+    let mut position: u8 = 0;
+    for subtag in t.split('-') {
+        if subtag.len() > 8 {
+            // All subtags have a maximum length of eight characters.
+            return Err(Error::SubtagTooLong);
+        }
+        if position == 6 {
+            langtag.privateuse.push(subtag.to_owned());
+        } else if subtag.eq_ignore_ascii_case("x") {
+            position = 6;
+        } else if position == 0 {
+            // Primary language
+            if subtag.len() < 2 || !is_alphabetic(subtag) {
+                return Err(Error::InvalidLanguage);
+            }
+            langtag.language = Some(subtag.to_owned());
+            if subtag.len() < 4 {
+                // extlangs are only allowed for short language tags
+                position = 1;
+            } else {
+                position = 2;
+            }
+        } else if position == 1 && subtag.len() == 3 && is_alphabetic(subtag) {
+            // extlangs
+            langtag.extlangs.push(subtag.to_owned());
+        } else if position <= 2 && subtag.len() == 4 && is_alphabetic(subtag) {
+            // Script
+            langtag.script = Some(subtag.to_owned());
+            position = 3;
+        } else if position <= 3 &&
+           (subtag.len() == 2 && is_alphabetic(subtag) || subtag.len() == 3 && is_numeric(subtag)) {
+            langtag.region = Some(subtag.to_owned());
+            position = 4;
+        } else if position <= 4 &&
+           (subtag.len() >= 5 && is_alphabetic(&subtag[0..1]) ||
+            subtag.len() >= 4 && is_numeric(&subtag[0..1])) {
+            // Variant
+            langtag.variants.push(subtag.to_owned());
+            position = 4;
+        } else if subtag.len() == 1 {
+            position = subtag.as_bytes()[0] as u8;
+            if langtag.extensions.contains_key(&position) {
+                return Err(Error::DuplicateExtension);
+            }
+            langtag.extensions.insert(position, Vec::new());
+        } else if position > 6 {
+            langtag.extensions
+                   .get_mut(&position)
+                   .expect("no entry found for key")
+                   .push(subtag.to_owned());
+        } else {
+            return Err(Error::InvalidSubtag);
+        }
+    }
+    Ok(position)
 }
 
 impl std::str::FromStr for LanguageTag {
@@ -389,74 +455,9 @@ impl std::str::FromStr for LanguageTag {
         // Handle grandfathered tags
         if let Some(&(tag, _)) = GRANDFATHERED.iter().find(|&&(x, _)| x.eq_ignore_ascii_case(t)) {
             langtag.language = Some((*tag).to_owned());
-            return Ok(langtag)
+            return Ok(langtag);
         }
-        // Handle normal tags
-        // The parser has a position from 0 to 6. Bigger positions reepresent the ASCII codes of
-        // single character extensions
-        // language-extlangs-script-region-variant-extension-privateuse
-        // --- 0 -- -- 1 -- -- 2 - -- 3 - -- 4 -- --- x --- ---- 6 ---
-        let mut position: u8 = 0;
-        for subtag in t.split('-') {
-            if subtag.len() > 8 {
-                // All subtags have a maximum length of eight characters.
-                return Err(Error::SubtagTooLong);
-            }
-            if position == 6 {
-                langtag.privateuse.push(subtag.to_owned());
-            } else if subtag.eq_ignore_ascii_case("x") {
-                position = 6;
-            } else if position == 0 {
-                // Primary language
-                if subtag.len() < 2 || !is_alphabetic(subtag) {
-                    return Err(Error::InvalidLanguage)
-                }
-                langtag.language = Some(subtag.to_owned());
-                if subtag.len() < 4 {
-                    // extlangs are only allowed for short language tags
-                    position = 1;
-                } else {
-                    position = 2;
-                }
-            } else if position == 1 && subtag.len() == 3 && is_alphabetic(subtag) {
-                // extlangs
-                langtag.extlangs.push(subtag.to_owned());
-                position = 2;
-            } else if position == 2 && subtag.len() == 3 && is_alphabetic(subtag) &&
-               !langtag.extlangs.is_empty() {
-                // Multiple extlangs
-                if langtag.extlangs.len() > 2 {
-                    // maximum 3 extlangs
-                    return Err(Error::TooManyExtlangs);
-                }
-                langtag.extlangs.push(subtag.to_owned());
-            } else if position <= 2 && subtag.len() == 4 && is_alphabetic(subtag) {
-                // Script
-                langtag.script = Some(subtag.to_owned());
-                position = 3;
-            } else if position <= 3 &&
-               (subtag.len() == 2 && is_alphabetic(subtag) ||
-                subtag.len() == 3 && is_numeric(subtag)) {
-                langtag.region = Some(subtag.to_owned());
-                position = 4;
-            } else if position <= 4 &&
-               (subtag.len() >= 5 && is_alphabetic(&subtag[0..1]) ||
-                subtag.len() >= 4 && is_numeric(&subtag[0..1])) {
-                // Variant
-                langtag.variants.push(subtag.to_owned());
-                position = 4;
-            } else if subtag.len() == 1 {
-                position = subtag.chars().next().unwrap() as u8;
-                if langtag.extensions.contains_key(&position) {
-                    return Err(Error::DuplicateExtension);
-                }
-                langtag.extensions.insert(position, Vec::new());
-            } else if position > 6 {
-                langtag.extensions.get_mut(&position).unwrap().push(subtag.to_owned());
-            } else {
-                return Err(Error::InvalidSubtag);
-            }
-        }
+        let position = try!(parse_language_tag(&mut langtag, t));
         if langtag.extensions.values().any(|x| x.is_empty()) {
             // Extensions and privateuse must not be empty if present
             return Err(Error::EmptyExtension);
@@ -464,16 +465,32 @@ impl std::str::FromStr for LanguageTag {
         if position == 6 && langtag.privateuse.is_empty() {
             return Err(Error::EmptyPrivateUse);
         }
-        return Ok(langtag);
+        if langtag.extlangs.len() > 2 {
+            // maximum 3 extlangs
+            return Err(Error::TooManyExtlangs);
+        }
+        Ok(langtag)
     }
 }
 
 impl fmt::Display for LanguageTag {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fn cmp_ignore_ascii_case(a: &u8, b: &u8) -> Ordering {
+            fn byte_to_uppercase(x: u8) -> u8 {
+                if x > 96 {
+                    x - 32
+                } else {
+                    x
+                }
+            }
+            let x: u8 = byte_to_uppercase(*a);
+            let y: u8 = byte_to_uppercase(*b);
+            x.cmp(&y)
+        }
         if let Some(ref x) = self.language {
             try!(Display::fmt(&x.to_ascii_lowercase()[..], f))
         }
-        for x in self.extlangs.iter() {
+        for x in &self.extlangs {
             try!(write!(f, "-{}", x.to_ascii_lowercase()));
         }
         if let Some(ref x) = self.script {
@@ -492,20 +509,8 @@ impl fmt::Display for LanguageTag {
         if let Some(ref x) = self.region {
             try!(write!(f, "-{}", x.to_ascii_uppercase()));
         }
-        for x in self.variants.iter() {
+        for x in &self.variants {
             try!(write!(f, "-{}", x.to_ascii_lowercase()));
-        }
-        fn cmp_ignore_ascii_case(a: &u8, b: &u8) -> Ordering {
-            fn byte_to_uppercase(x: u8) -> u8 {
-                if x > 96 {
-                    x - 32
-                } else {
-                    x
-                }
-            }
-            let x: u8 = byte_to_uppercase(*a);
-            let y: u8 = byte_to_uppercase(*b);
-            x.cmp(&y)
         }
         let mut extensions: Vec<(&u8, &Vec<String>)> = self.extensions.iter().collect();
         extensions.sort_by(|&(a, _), &(b, _)| cmp_ignore_ascii_case(a, b));
@@ -523,7 +528,7 @@ impl fmt::Display for LanguageTag {
             } else {
                 try!(f.write_str("-x"));
             }
-            for value in self.privateuse.iter() {
+            for value in &self.privateuse {
                 try!(write!(f, "-{}", value));
             }
         }
