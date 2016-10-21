@@ -75,7 +75,7 @@ fn is_alphanumeric_or_dash(s: &str) -> bool {
 /// Defines an Error type for langtags.
 ///
 /// Errors occur mainly during parsing of language tags.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Error {
     /// The same extension subtag is only allowed once in a tag before the private use part.
     DuplicateExtension,
