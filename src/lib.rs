@@ -1,7 +1,5 @@
 #![deny(missing_docs)]
 #![cfg_attr(test, deny(warnings))]
-#![cfg_attr(feature = "heap_size", feature(custom_derive, plugin))]
-#![cfg_attr(feature = "heap_size", plugin(heapsize_plugin))]
 
 //! Language tags can be used identify human languages, scripts e.g. Latin script, countries and
 //! other regions.
@@ -51,8 +49,10 @@
 
 #[cfg(feature = "heap_size")]
 extern crate heapsize;
+#[cfg(feature = "heap_size")]
+#[macro_use]
+extern crate heapsize_derive;
 
-use std::ascii::AsciiExt;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error as ErrorTrait;

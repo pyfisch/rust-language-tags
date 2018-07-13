@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate language_tags;
 
-use std::ascii::AsciiExt;
 use std::default::Default;
 use std::collections::BTreeMap;
 
