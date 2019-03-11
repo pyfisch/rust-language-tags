@@ -2,6 +2,7 @@
 name = "language-tags"
 version = "0.3.0"
 authors = ["Pyfisch <pyfisch@gmail.com>"]
+edition = "2018"
 
 description = "Language tags for Rust"
 license = "MIT"

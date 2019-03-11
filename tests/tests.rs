@@ -1,4 +1,4 @@
-extern crate language_tags;
+
 
 use std::str::FromStr;
 
