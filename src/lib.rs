@@ -9,8 +9,8 @@
 //! the W3C. They are commonly used in HTML and HTTP `Content-Language` and `Accept-Language`
 //! header fields.
 //!
-//! This package currently supports parsing (fully conformant parser), formatting and comparing
-//! language tags.
+//! This package currently supports parsing (fully conformant parser), validation, canonicalization,
+//! formatting and comparing language tags.
 //!
 //! # Examples
 //! Create a simple language tag representing the French language as spoken
@@ -47,105 +47,13 @@
 //! assert!(langtag_user.matches(&langtag_server));
 //! ```
 
+mod iana_registry;
+
+use crate::iana_registry::*;
 use std::error::Error;
 use std::fmt;
 use std::iter::once;
 use std::str::Split;
-
-/// Contains all grandfathered tags.
-pub const GRANDFATHERED: [(&str, Option<&str>); 26] = [
-    ("art-lojban", Some("jbo")),
-    ("cel-gaulish", None),
-    ("en-GB-oed", Some("en-GB-oxendict")),
-    ("i-ami", Some("ami")),
-    ("i-bnn", Some("bnn")),
-    ("i-default", None),
-    ("i-enochian", None),
-    ("i-hak", Some("hak")),
-    ("i-klingon", Some("tlh")),
-    ("i-lux", Some("lb")),
-    ("i-mingo", None),
-    ("i-navajo", Some("nv")),
-    ("i-pwn", Some("pwn")),
-    ("i-tao", Some("tao")),
-    ("i-tay", Some("tay")),
-    ("i-tsu", Some("tsu")),
-    ("no-bok", Some("nb")),
-    ("no-nyn", Some("nn")),
-    ("sgn-BE-FR", Some("sfb")),
-    ("sgn-BE-NL", Some("vgt")),
-    ("sgn-CH-DE", Some("sgg")),
-    ("zh-guoyu", Some("cmn")),
-    ("zh-hakka", Some("hak")),
-    ("zh-min", None),
-    ("zh-min-nan", Some("nan")),
-    ("zh-xiang", Some("hsn")),
-];
-
-const DEPRECATED_LANGUAGE: [(&str, &str); 53] = [
-    ("in", "id"),
-    ("iw", "he"),
-    ("ji", "yi"),
-    ("jw", "jv"),
-    ("mo", "ro"),
-    ("aam", "aas"),
-    ("adp", "dz"),
-    ("aue", "ktz"),
-    ("ayx", "nun"),
-    ("bjd", "drl"),
-    ("ccq", "rki"),
-    ("cjr", "mom"),
-    ("cka", "cmr"),
-    ("cmk", "xch"),
-    ("drh", "khk"),
-    ("drw", "prs"),
-    ("gav", "dev"),
-    ("gfx", "vaj"),
-    ("gti", "nyc"),
-    ("hrr", "jal"),
-    ("ibi", "opa"),
-    ("ilw", "gal"),
-    ("kgh", "kml"),
-    ("koj", "kwv"),
-    ("kwq", "yam"),
-    ("kxe", "tvd"),
-    ("lii", "raq"),
-    ("lmm", "rmx"),
-    ("meg", "cir"),
-    ("mst", "mry"),
-    ("mwj", "vaj"),
-    ("myt", "mry"),
-    ("nnx", "ngv"),
-    ("oun", "vaj"),
-    ("pcr", "adx"),
-    ("pmu", "phr"),
-    ("ppr", "lcq"),
-    ("puz", "pub"),
-    ("sca", "hle"),
-    ("thx", "oyb"),
-    ("tie", "ras"),
-    ("tkk", "twm"),
-    ("tlw", "weo"),
-    ("tnf", "prs"),
-    ("tsf", "taj"),
-    ("uok", "ema"),
-    ("xia", "acn"),
-    ("xsj", "suj"),
-    ("ybd", "rki"),
-    ("yma", "lrr"),
-    ("ymt", "mtm"),
-    ("yos", "zom"),
-    ("yuu", "yug"),
-];
-
-const DEPRECATED_REGION: [(&str, &str); 6] = [
-    ("BU", "MM"),
-    ("DD", "DE"),
-    ("FX", "FR"),
-    ("TP", "TL"),
-    ("YD", "YE"),
-    ("ZR", "CD"),
-];
 
 /// A language tag as described in [RFC 5646](https://tools.ietf.org/html/rfc5646).
 ///
@@ -310,12 +218,12 @@ impl LanguageTag {
     /// If the language tag is not "well-formed" a `ParseError` variant will be returned.
     pub fn parse(input: &str) -> Result<Self, ParseError> {
         //grandfathered tags
-        if let Some((tag, _)) = GRANDFATHERED
+        if let Some(record) = GRANDFATHEREDS
             .iter()
-            .find(|(x, _)| x.eq_ignore_ascii_case(input))
+            .find(|record| record.tag.eq_ignore_ascii_case(input))
         {
             // grandfathered tag
-            Ok(tag_from_primary_language(*tag))
+            Ok(tag_from_primary_language(record.tag))
         } else if input.starts_with("x-") || input.starts_with("X-") {
             // private use
             if !is_alphanumeric_or_dash(input) {
@@ -333,7 +241,17 @@ impl LanguageTag {
     /// Check if the language tag is "valid" according to
     /// [RFC 5646](https://tools.ietf.org/html/rfc5646#section-2.2.9).
     ///
-    /// Warning: validation against IANA Language Subtag Registry is not implemented yet
+    /// It applies the following steps:
+    ///
+    /// * grandfathereds and private use tags are valid
+    /// * There should be no more than one extended language subtag
+    ///   (c.f. [errata 5457](https://www.rfc-editor.org/errata/eid5457)).
+    /// * Primary language, extended language, script, region and variants should appear
+    ///   in the IANA Language Subtag Registry.
+    /// * Extended language and variants should have a correct prefix as set
+    ///   in the IANA Language Subtag Registry.
+    /// * There should be no duplicate variant and singleton (extension) subtags.
+    ///
     ///
     /// # Errors
     ///
@@ -342,25 +260,87 @@ impl LanguageTag {
         // The tag is well-formed.
         // always ok
 
-        // Either the tag is in the list of grandfathered tags or all of its
-        // primary language, extended language, script, region, and variant
+        // Private tag
+        if self.serialization.starts_with("x-") {
+            return Ok(());
+        }
+
+        // The tag is in the list of grandfathered tags
+        if GRANDFATHEREDS
+            .iter()
+            .any(|record| record.tag == self.serialization)
+        {
+            return Ok(());
+        }
+
+        // There is no more than one extended language subtag.
+        // From [errata 5457](https://www.rfc-editor.org/errata/eid5457).
+        if let Some(extended_language) = self.extended_language() {
+            if extended_language.contains('-') {
+                return Err(ValidationError::MultipleExtendedLanguageSubtags);
+            }
+        }
+
+        // all of its primary language, extended language, script, region, and variant
         // subtags appear in the IANA Language Subtag Registry as of the
         // particular registry date.
-        // TODO
+        let primary_language = self.primary_language();
+        if LANGUAGES
+            .iter()
+            .all(|record| record.subtag != primary_language)
+        {
+            return Err(ValidationError::PrimaryLanguageNotInRegistry);
+        }
+        if let Some(extended_language) = self.extended_language() {
+            if let Some(record) = EXTLANGS
+                .iter()
+                .find(|record| record.subtag == extended_language)
+            {
+                if !self.serialization.starts_with(record.prefix) {
+                    return Err(ValidationError::WrongExtendedLanguagePrefix);
+                }
+            } else {
+                return Err(ValidationError::ExtendedLanguageNotInRegistry);
+            }
+        }
+        if let Some(script) = self.script() {
+            if SCRIPTS.iter().all(|record| record.subtag != script) {
+                return Err(ValidationError::ScriptNotInRegistry);
+            }
+        }
+        if let Some(region) = self.region() {
+            if REGIONS.iter().all(|record| record.subtag != region) {
+                return Err(ValidationError::RegionNotInRegistry);
+            }
+        }
+        for variant in self.variant_subtags() {
+            if let Some(record) = VARIANTS.iter().find(|record| record.subtag == variant) {
+                if !record
+                    .prefixes
+                    .split(' ')
+                    .any(|prefix| self.serialization.starts_with(prefix))
+                {
+                    return Err(ValidationError::WrongVariantPrefix);
+                }
+            } else {
+                return Err(ValidationError::VariantNotInRegistry);
+            }
+        }
 
         // There are no duplicate variant subtags.
-        if self.variant_subtags().enumerate().any(|(id1, variant1)| {
+        let with_duplicate_variant = self.variant_subtags().enumerate().any(|(id1, variant1)| {
             self.variant_subtags()
                 .enumerate()
                 .any(|(id2, variant2)| id1 != id2 && variant1 == variant2)
-        }) {
+        });
+        if with_duplicate_variant {
             return Err(ValidationError::DuplicateVariant);
         }
 
         // There are no duplicate singleton (extension) subtags.
         if let Some(extension) = self.extension() {
             let mut seen_extensions = AlphanumericLowerCharSet::new();
-            if extension.split('-').any(|subtag| {
+            let with_duplicate_extension = extension.split('-').any(|subtag| {
                 if subtag.len() == 1 {
                     let extension = subtag.chars().next().unwrap();
                     if seen_extensions.contains(extension) {
@@ -372,16 +352,9 @@ impl LanguageTag {
                 } else {
                     false
                 }
-            }) {
+            });
+            if with_duplicate_extension {
                 return Err(ValidationError::DuplicateExtension);
-            }
-        }
-
-        // There is no more than one extended language subtag.
-        // From [errata 5457](https://www.rfc-editor.org/errata/eid5457).
-        if let Some(extended_language) = self.extended_language() {
-            if extended_language.contains('-') {
-                return Err(ValidationError::MultipleExtendedLanguageSubtags);
             }
         }
 
@@ -394,48 +367,104 @@ impl LanguageTag {
         self.validate().is_ok()
     }
 
-    /// Returns the canonical version of the language tag.
+    /// Returns the canonical version of the language tag following
+    /// [RFC 5646 4.5](https://tools.ietf.org/html/rfc5646#section-4.5).
     ///
     /// It currently applies the following steps:
     ///
     /// * Grandfathered tags are replaced with the canonical version if possible.
+    /// * Redundant tags are replaced with the canonical version if possible.
     /// * Extension languages are promoted to primary language.
-    /// * Deprecated languages are replaced with modern equivalents.
-    /// * Deprecated regions are replaced with new country names.
-    /// * The `heploc` variant is replaced with `alalc97`.
+    /// * Deprecated languages, scripts, regions and variants are replaced with modern equivalents.
+    /// * Suppress-Script is applied to remove default script for a language (e.g. "en-Latn" is canonicalized as "en").
+    /// * Variants are deduplicated
     ///
-    /// The returned language tags may not be completly canonical and they are
-    /// not validated.
     ///
-    /// Warning: This function does not fully implement yet the canonization algorithm described in
-    /// [RFC 5646 4.5](https://tools.ietf.org/html/rfc5646#section-4.5)
-    pub fn canonicalize(&self) -> LanguageTag {
-        let mut language = self.primary_language();
+    /// # Errors
+    ///
+    /// If there is not a unique way to canonicalize the language tag
+    /// a `ValidationError` variant will be returned.
+    pub fn canonicalize(&self) -> Result<LanguageTag, ValidationError> {
+        //We could not do anything for private use
+        if self.serialization.starts_with("x-") {
+            return Ok(self.clone());
+        }
 
-        // Grandfathered
-        if let Some((_, Some(tag))) = GRANDFATHERED.iter().find(|(x, _)| *x == language) {
-            return tag_from_primary_language(*tag);
+        // 2 Redundant or grandfathered tags are replaced by their 'Preferred-Value', if there is one.
+        if let Some(record) = GRANDFATHEREDS
+            .iter()
+            .find(|record| record.tag == self.serialization)
+        {
+            return Ok(if let Some(preferred_value) = record.preferred_value {
+                Self::parse(preferred_value).unwrap()
+            } else {
+                self.clone()
+            });
+        }
+        if let Some(preferred_value) = REDUNDANTS
+            .iter()
+            .find(|record| record.tag == self.serialization)
+            .and_then(|record| record.preferred_value)
+        {
+            return Ok(Self::parse(preferred_value).unwrap());
+        }
+        //TODO: what if a redundant has a some extensions/private use?
+
+        // 3.  Subtags are replaced by their 'Preferred-Value', if there is one.
+        // Primary language
+        let mut primary_language = self.primary_language();
+        if let Some(preferred_value) = LANGUAGES
+            .iter()
+            .find(|record| record.subtag == primary_language)
+            .and_then(|record| record.preferred_value)
+        {
+            primary_language = preferred_value;
         }
 
         // Extended language
-        if let Some(extended_language) = self.extended_language() {
-            language = extended_language;
-        }
-
-        //Deprecated language
-        if let Some((_, l)) = DEPRECATED_LANGUAGE.iter().find(|(x, _)| *x == language) {
-            language = l;
+        // For extlangs, the original primary language subtag is also replaced if there is a primary language subtag in the 'Preferred-Value'.
+        let mut extended_language = None;
+        if let Some(extlang) = self.extended_language() {
+            // We fail if there is more than one (no single possible canonicalization)
+            if extlang.contains('-') {
+                return Err(ValidationError::MultipleExtendedLanguageSubtags);
+            }
+            if let Some(preferred_value) = EXTLANGS
+                .iter()
+                .find(|record| record.subtag == extlang)
+                .map(|record| record.preferred_value)
+            {
+                primary_language = preferred_value;
+            } else {
+                extended_language = Some(extlang);
+            }
         }
 
         let mut serialization = String::with_capacity(self.serialization.len());
-        serialization.push_str(language);
-        let language_end = language.len();
-        let extlang_end = language.len();
+        serialization.push_str(primary_language);
+        let language_end = serialization.len();
+        if let Some(extended_language) = extended_language {
+            serialization.push('-');
+            serialization.push_str(extended_language);
+        }
+        let extlang_end = serialization.len();
 
         // Script
         if let Some(script) = self.script() {
-            serialization.push('-');
-            serialization.push_str(script);
+            let script = SCRIPTS
+                .iter()
+                .find(|record| record.subtag == script)
+                .and_then(|record| record.preferred_value)
+                .unwrap_or(script);
+
+            // Suppress-Script
+            let match_suppress_script = LANGUAGES.iter().any(|record| {
+                record.subtag == primary_language && record.suppress_script == Some(script)
+            });
+            if !match_suppress_script {
+                serialization.push('-');
+                serialization.push_str(script);
+            }
         }
         let script_end = serialization.len();
 
@@ -443,30 +472,46 @@ impl LanguageTag {
         if let Some(region) = self.region() {
             serialization.push('-');
             serialization.push_str(
-                if let Some(&(_, r)) = DEPRECATED_REGION.iter().find(|&&(x, _)| x == region) {
-                    r
-                } else {
-                    region
-                },
+                REGIONS
+                    .iter()
+                    .find(|record| record.subtag == region)
+                    .and_then(|record| record.preferred_value)
+                    .unwrap_or(region),
             );
         }
         let region_end = serialization.len();
 
         // Variant
         for variant in self.variant_subtags() {
-            serialization.push('-');
-            serialization.push_str(if variant == "heploc" {
-                "alalc97"
-            } else {
-                variant
-            });
+            let variant = VARIANTS
+                .iter()
+                .find(|record| record.subtag == variant)
+                .and_then(|record| record.preferred_value)
+                .unwrap_or(variant);
+            let variant_already_exists = serialization.split('-').any(|subtag| subtag == variant);
+            if !variant_already_exists {
+                serialization.push('-');
+                serialization.push_str(variant);
+            }
         }
         let variant_end = serialization.len();
 
         //Extension
-        if let Some(extension) = self.extension() {
-            serialization.push('-');
-            serialization.push_str(extension);
+        // 1.  Extension sequences are ordered into case-insensitive ASCII order by singleton subtags
+        if self.extension().is_some() {
+            let mut extensions: Vec<_> = self.extension_subtags().collect();
+            extensions.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
+
+            let mut current_extension = ' ';
+            for (k, v) in extensions {
+                if k != current_extension {
+                    serialization.push('-');
+                    serialization.push(k);
+                    current_extension = k;
+                }
+                serialization.push('-');
+                serialization.push_str(v);
+            }
         }
         let extension_end = serialization.len();
 
@@ -476,7 +521,7 @@ impl LanguageTag {
             serialization.push_str(private_use);
         }
 
-        LanguageTag {
+        Ok(LanguageTag {
             serialization,
             language_end,
             extlang_end,
@@ -484,7 +529,7 @@ impl LanguageTag {
             region_end,
             variant_end,
             extension_end,
-        }
+        })
     }
 
     /// Matches language tags. The first language acts as a language range, the second one is used
@@ -935,6 +980,20 @@ pub enum ValidationError {
     DuplicateExtension,
     /// only one extended language subtag is allowed
     MultipleExtendedLanguageSubtags,
+    /// The primary language is not in the IANA Language Subtag Registry
+    PrimaryLanguageNotInRegistry,
+    /// The extended language is not in the IANA Language Subtag Registry
+    ExtendedLanguageNotInRegistry,
+    /// The script is not in the IANA Language Subtag Registry
+    ScriptNotInRegistry,
+    /// The region is not in the IANA Language Subtag Registry
+    RegionNotInRegistry,
+    /// A variant is not in the IANA Language Subtag Registry
+    VariantNotInRegistry,
+    /// The primary language is not the expected extended language prefix from the IANA Language Subtag Registry
+    WrongExtendedLanguagePrefix,
+    /// The language tag has not one of the expected variant prefix from the IANA Language Subtag Registry
+    WrongVariantPrefix,
 }
 
 impl Error for ValidationError {
@@ -948,6 +1007,27 @@ impl Error for ValidationError {
             }
             ValidationError::MultipleExtendedLanguageSubtags => {
                 "only one extended language subtag is allowed"
+            }
+            ValidationError::PrimaryLanguageNotInRegistry => {
+                "The primary language is not in the IANA Language Subtag Registry"
+            }
+            ValidationError::ExtendedLanguageNotInRegistry => {
+                "The extended language is not in the IANA Language Subtag Registry"
+            }
+            ValidationError::ScriptNotInRegistry => {
+                "The script is not in the IANA Language Subtag Registry"
+            }
+            ValidationError::RegionNotInRegistry => {
+                "The region is not in the IANA Language Subtag Registry"
+            }
+            ValidationError::VariantNotInRegistry => {
+                "A variant is not in the IANA Language Subtag Registry"
+            }
+            ValidationError::WrongExtendedLanguagePrefix => {
+                "The primary language is not the expected extended language prefix from the IANA Language Subtag Registry"
+            }
+            ValidationError::WrongVariantPrefix => {
+                "The language tag has not one of the expected variant prefix from the IANA Language Subtag Registry"
             }
         }
     }

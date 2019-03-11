@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use language_tags::{LanguageTag, ParseError};
+use language_tags::LanguageTag;
 
 // All tests here may be completly nonsensical.
 
@@ -226,23 +226,46 @@ fn test_privateuse() {
 // Tests from RFC 5646 2.2.9
 #[test]
 fn test_is_valid() {
-    assert!(LanguageTag::parse("sr-Latn-RS").unwrap().is_valid());
-    assert!(!LanguageTag::parse("de-DE-1901-aaaaa-1901")
-        .unwrap()
-        .is_valid());
-    assert!(!LanguageTag::parse("en-a-bbb-a-ccc").unwrap().is_valid());
-    assert!(!LanguageTag::parse("ab-c-abc-r-toto-c-abc")
-        .unwrap()
-        .is_valid());
-    assert!(LanguageTag::parse("en-a-bbb-x-a-ccc").unwrap().is_valid());
+    let valid_tags = vec![
+        "sr-Latn-RS",
+        "zh-gan",
+        "zh-Latn-wadegile",
+        "en-unifon",
+        "en-a-bbb-x-a-ccc",
+    ];
+    for valid_tag in valid_tags {
+        let validation = LanguageTag::parse(valid_tag).unwrap().validate();
+        assert!(
+            validation.is_ok(),
+            "{} is considered invalid: {}",
+            valid_tag,
+            validation.err().unwrap()
+        );
+    }
 }
 
 #[test]
-fn test_invalid_from_str() {
-    assert_eq!(
-        "sl-07".parse::<LanguageTag>(),
-        Err(ParseError::InvalidSubtag)
-    );
+fn test_is_not_valid() {
+    let invalid_tags = vec![
+        "qqq-Latn-RS",
+        "sr-Latq-RS",
+        "sr-Latn-XX",
+        "de-gan",
+        "zhb-gan",
+        "zh-Hans-wadegile",
+        "de-unifon",
+        "ena-unifon",
+        "de-DE-1901-aaaaa-1901",
+        "en-a-bbb-a-ccc",
+        "ab-c-abc-r-toto-c-abc",
+    ];
+    for invalid_tag in invalid_tags {
+        assert!(
+            !LanguageTag::parse(invalid_tag).unwrap().is_valid(),
+            "{} is considered valid",
+            invalid_tag
+        );
+    }
 }
 
 #[test]
@@ -291,9 +314,6 @@ fn test_unicode() {
 }
 
 #[test]
-fn test_format() {}
-
-#[test]
 fn test_cmp() {
     assert_eq!(
         LanguageTag::parse("dE-AraB-lY"),
@@ -302,26 +322,54 @@ fn test_cmp() {
     assert_ne!(LanguageTag::parse("zh"), LanguageTag::parse("zh-Latn"));
 }
 
+// Tests from RFC 5646 4.5
 #[test]
 fn test_canonicalize() {
-    assert_eq!(
-        "en-MM",
-        LanguageTag::parse("en-BU").unwrap().canonicalize().as_str()
-    );
-    assert_eq!(
-        "sfb",
-        LanguageTag::parse("sgn-BE-FR")
-            .unwrap()
-            .canonicalize()
-            .as_str()
-    );
-    assert_eq!(
-        "ja-Latn-alalc97",
-        LanguageTag::parse("ja-Latn-heploc")
-            .unwrap()
-            .canonicalize()
-            .as_str()
-    );
+    let conversion = vec![
+        ("sgn-BE-FR", "sfb"),
+        ("no-nyn", "nn"),
+        ("i-klingon", "tlh"),
+        ("zh-hak", "hak"),
+        ("en-BU", "en-MM"),
+        ("iw", "he"),
+        ("en-ZR", "en-CD"),
+        ("sh-yue", "yue"),
+        ("zh-yue-Hant-HK", "yue-Hant-HK"),
+        ("is-Latn", "is"),
+        ("ja-Latn-heploc", "ja-Latn-alalc97"),
+        ("sl-nedis-metelko-nedis", "sl-nedis-metelko"),
+        ("ja-Latn-hepburn-heploc", "ja-Latn-hepburn-alalc97"),
+        ("en-b-warble-a-babble", "en-a-babble-b-warble"),
+        ("en-b-ccc-bbb-a-aaa-X-xyz", "en-a-aaa-b-ccc-bbb-x-xyz"),
+    ];
+    for (input, output) in conversion {
+        let canonicalization = LanguageTag::parse(input).unwrap().canonicalize();
+        assert!(
+            canonicalization.is_ok(),
+            "Canonicalization of {} failed: {}",
+            input,
+            canonicalization.err().unwrap()
+        );
+        assert_eq!(
+            LanguageTag::parse(output).unwrap(),
+            canonicalization.unwrap()
+        );
+    }
+}
+
+#[test]
+fn test_canonicalize_fail() {
+    let invalid_tags = vec!["zh-cmn-cpx"];
+    for invalid_tag in invalid_tags {
+        assert!(
+            LanguageTag::parse(invalid_tag)
+                .unwrap()
+                .canonicalize()
+                .is_err(),
+            "{} canonicalization succeeded",
+            invalid_tag
+        );
+    }
 }
 
 // http://www.langtag.net/test-suites/well-formed-tags.txt
@@ -462,7 +510,7 @@ fn test_valid_tags() {
     let tags = vec![
         "fr",
         "fr-Latn",
-        "fr-fra", // Extended tag
+        //Not valid "fr-fra", // Extended tag
         "fr-Latn-FR",
         "fr-Latn-419",
         "fr-FR",
@@ -472,7 +520,7 @@ fn test_valid_tags() {
         "apa-CA",
         "i-klingon", // grandfathered with singleton
         "no-bok",    // grandfathered without singleton
-        "fr-Lat",    // Extended
+        //Not valid "fr-Lat",    // Extended
         "mn-Cyrl-MN",
         "mN-cYrL-Mn",
         "fr-Latn-CA",
@@ -519,12 +567,20 @@ fn test_valid_tags() {
             tag,
             result.err().unwrap()
         );
-        let validation = result.unwrap().validate();
+        let tag = result.unwrap();
+        let validation = tag.validate();
         assert!(
             validation.is_ok(),
             "{} should be considered valid but returned error {}",
             tag,
             validation.err().unwrap()
+        );
+        let canonicalization = tag.canonicalize();
+        assert!(
+            canonicalization.is_ok(),
+            "{} canonicalization should not fail but returned error {}",
+            tag,
+            canonicalization.err().unwrap()
         );
     }
 }
@@ -533,17 +589,17 @@ fn test_valid_tags() {
 #[test]
 fn test_invalid_tags() {
     let tags = vec![
-        "en-a-bbb-a-ccc", // 'a' appears twice, moved from broken_tags
+        "en-a-bbb-a-ccc",        // 'a' appears twice, moved from broken_tags
         "ab-c-abc-r-toto-c-abc", // 'c' appears twice ", moved from broken_tags
-                          //TODO "ax-TZ",    // Not in the registry, but well-formed
-                          //TODO "fra-Latn", // ISO 639 can be 3-letters
-                          //TODO "fra",
-                          //TODO "fra-FX",
-                          //TODO "abcd-Latn",          // Language of 4 chars reserved for future use
-                          //TODO "AaBbCcDd-x-y-any-x", // Language of 5-8 chars, registered
-                          //TODO "zh-Latm-CN",         // Typo
-                          //TODO "de-DE-1902",         // Wrong variant
-                          //TODO "fr-shadok",          // Variant
+        "ax-TZ",                 // Not in the registry, but well-formed
+        "fra-Latn",              // ISO 639 can be 3-letters
+        "fra",
+        "fra-FX",
+        "abcd-Latn",          // Language of 4 chars reserved for future use
+        "AaBbCcDd-x-y-any-x", // Language of 5-8 chars, registered
+        "zh-Latm-CN",         // Typo
+        "de-DE-1902",         // Wrong variant
+        "fr-shadok",          // Variant
     ];
     for tag in tags {
         let result = LanguageTag::from_str(tag);
