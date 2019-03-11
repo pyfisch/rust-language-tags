@@ -1,8 +1,8 @@
 # rust-language-tags
 [![Build Status](https://travis-ci.org/pyfisch/rust-language-tags.svg?branch=master)](https://travis-ci.org/pyfisch/rust-language-tags)
-[![Coverage Status](https://coveralls.io/repos/pyfisch/rust-language-tags/badge.svg)](https://coveralls.io/r/pyfisch/rust-language-tags)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![crates.io](http://meritbadge.herokuapp.com/language-tags)](https://crates.io/crates/language-tags)
+[![Documentation](https://docs.rs/language-tags/badge.svg)](https://docs.rs/language-tags)
 
 Language tags can be used identify human languages, scripts e.g. Latin script, countries and
 other regions.
@@ -42,11 +42,10 @@ standard German the opposite is not always true. So the resource can be presente
 to the user but if the resource was in `de-AT` and a user asked for a representation
 in `de` the request should be rejected.
 
+
 ```rust
 use language_tags::LanguageTag;
 let mut langtag_server = LanguageTag::parse("de-AT").unwrap();
 let mut langtag_user = LanguageTag::parse("de").unwrap();
 assert!(langtag_user.matches(&langtag_server));
 ```
-
-There is also the `langtag!` macro for creating language tags.

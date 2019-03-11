@@ -1,7 +1,5 @@
 #![deny(missing_docs)]
 #![cfg_attr(test, deny(warnings))]
-#![cfg_attr(feature = "heap_size", feature(custom_derive, plugin))]
-#![cfg_attr(feature = "heap_size", plugin(heapsize_plugin))]
 
 //! Language tags can be used identify human languages, scripts e.g. Latin script, countries and
 //! other regions.
@@ -35,6 +33,12 @@
 //! ```
 //!
 //! You can check for equality, but more often you should test if two tags match.
+//! In this example we check if the resource in German language is suitable for
+//! a user from Austria. While people speaking Austrian German normally understand
+//! standard German the opposite is not always true. So the resource can be presented
+//! to the user but if the resource was in `de-AT` and a user asked for a representation
+//! in `de` the request should be rejected.
+//!
 //!
 //! ```rust
 //! use language_tags::LanguageTag;
@@ -42,11 +46,6 @@
 //! let mut langtag_user = LanguageTag::parse("de").unwrap();
 //! assert!(langtag_user.matches(&langtag_server));
 //! ```
-//!
-//! There is also the `langtag!` macro for creating language tags.
-
-#[cfg(feature = "heap_size")]
-extern crate heapsize;
 
 use std::error::Error;
 use std::fmt;
@@ -156,7 +155,6 @@ const DEPRECATED_REGION: [(&str, &str); 6] = [
 /// but excludes languages not intended primarily for human
 /// communication, such as programming languages.
 #[derive(Eq, PartialEq, Debug, Clone, Hash)]
-#[cfg_attr(feature = "heap_size", derive(HeapSizeOf))]
 pub struct LanguageTag {
     /// Syntax described in [RFC 5646 2.1](https://tools.ietf.org/html/rfc5646#section-2.1)
     serialization: String,
