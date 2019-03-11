@@ -21,9 +21,7 @@ in Belgium and print it:
 
 ```rust
 use language_tags::LanguageTag;
-let mut langtag: LanguageTag = Default::default();
-langtag.language = Some("fr".to_owned());
-langtag.region = Some("BE".to_owned());
+let langtag = LanguageTag::parse("fr-BE").unwrap();
 assert_eq!(format!("{}", langtag), "fr-BE");
 ```
 
@@ -31,9 +29,10 @@ Parse a tag representing a special type of English specified by private agreemen
 
 ```rust
 use language_tags::LanguageTag;
+use std::iter::FromIterator;
 let langtag: LanguageTag = "en-x-twain".parse().unwrap();
-assert_eq!(format!("{}", langtag.language.unwrap()), "en");
-assert_eq!(format!("{:?}", langtag.privateuse), "[\"twain\"]");
+assert_eq!(langtag.primary_language(), "en");
+assert_eq!(Vec::from_iter(langtag.private_use_subtags()), vec!["twain"]);
 ```
 
 You can check for equality, but more often you should test if two tags match.
@@ -45,12 +44,9 @@ in `de` the request should be rejected.
 
 ```rust
 use language_tags::LanguageTag;
-let mut langtag1: LanguageTag = Default::default();
-langtag1.language = Some("de".to_owned());
-langtag1.region = Some("AT".to_owned());
-let mut langtag2: LanguageTag = Default::default();
-langtag2.language = Some("de".to_owned());
-assert!(langtag2.matches(&langtag1));
+let mut langtag_server = LanguageTag::parse("de-AT").unwrap();
+let mut langtag_user = LanguageTag::parse("de").unwrap();
+assert!(langtag_user.matches(&langtag_server));
 ```
 
 There is also the `langtag!` macro for creating language tags.
