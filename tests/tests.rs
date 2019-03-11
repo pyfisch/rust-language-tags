@@ -1,5 +1,3 @@
-
-
 use std::str::FromStr;
 
 use language_tags::{LanguageTag, ParseError};
