@@ -12,3 +12,9 @@ keywords = ["language", "internationalization", "translation", "http", "html"]
 [badges]
 travis-ci = { repository = "pyfisch/rust-language-tags" }
 
+[dev-dependencies]
+bencher = "0.1"
+
+[[bench]]
+name = "language_tag"
+harness = false
