@@ -266,9 +266,7 @@ impl LanguageTag {
         }
 
         // The tag is in the list of grandfathered tags
-        if GRANDFATHEREDS
-            .iter()
-            .any(|record| record.tag == self.serialization)
+        if find_in_slice_by_key(&GRANDFATHEREDS, &self.serialization, |record| record.tag).is_some()
         {
             return Ok(());
         }
@@ -285,16 +283,12 @@ impl LanguageTag {
         // subtags appear in the IANA Language Subtag Registry as of the
         // particular registry date.
         let primary_language = self.primary_language();
-        if LANGUAGES
-            .iter()
-            .all(|record| record.subtag != primary_language)
-        {
+        if find_in_slice_by_key(&LANGUAGES, primary_language, |record| record.subtag).is_none() {
             return Err(ValidationError::PrimaryLanguageNotInRegistry);
         }
         if let Some(extended_language) = self.extended_language() {
-            if let Some(record) = EXTLANGS
-                .iter()
-                .find(|record| record.subtag == extended_language)
+            if let Some(record) =
+                find_in_slice_by_key(&EXTLANGS, extended_language, |record| record.subtag)
             {
                 if !self.serialization.starts_with(record.prefix) {
                     return Err(ValidationError::WrongExtendedLanguagePrefix);
@@ -304,17 +298,17 @@ impl LanguageTag {
             }
         }
         if let Some(script) = self.script() {
-            if SCRIPTS.iter().all(|record| record.subtag != script) {
+            if find_in_slice_by_key(&SCRIPTS, script, |record| record.subtag).is_none() {
                 return Err(ValidationError::ScriptNotInRegistry);
             }
         }
         if let Some(region) = self.region() {
-            if REGIONS.iter().all(|record| record.subtag != region) {
+            if find_in_slice_by_key(&REGIONS, region, |record| record.subtag).is_none() {
                 return Err(ValidationError::RegionNotInRegistry);
             }
         }
         for variant in self.variant_subtags() {
-            if let Some(record) = VARIANTS.iter().find(|record| record.subtag == variant) {
+            if let Some(record) = find_in_slice_by_key(&VARIANTS, variant, |record| record.subtag) {
                 if !record
                     .prefixes
                     .split(' ')
@@ -391,9 +385,8 @@ impl LanguageTag {
         }
 
         // 2 Redundant or grandfathered tags are replaced by their 'Preferred-Value', if there is one.
-        if let Some(record) = GRANDFATHEREDS
-            .iter()
-            .find(|record| record.tag == self.serialization)
+        if let Some(record) =
+            find_in_slice_by_key(&GRANDFATHEREDS, &self.serialization, |record| record.tag)
         {
             return Ok(if let Some(preferred_value) = record.preferred_value {
                 Self::parse(preferred_value).unwrap()
@@ -401,10 +394,9 @@ impl LanguageTag {
                 self.clone()
             });
         }
-        if let Some(preferred_value) = REDUNDANTS
-            .iter()
-            .find(|record| record.tag == self.serialization)
-            .and_then(|record| record.preferred_value)
+        if let Some(preferred_value) =
+            find_in_slice_by_key(&REDUNDANTS, &self.serialization, |record| record.tag)
+                .and_then(|record| record.preferred_value)
         {
             return Ok(Self::parse(preferred_value).unwrap());
         }
@@ -413,10 +405,9 @@ impl LanguageTag {
         // 3.  Subtags are replaced by their 'Preferred-Value', if there is one.
         // Primary language
         let mut primary_language = self.primary_language();
-        if let Some(preferred_value) = LANGUAGES
-            .iter()
-            .find(|record| record.subtag == primary_language)
-            .and_then(|record| record.preferred_value)
+        if let Some(preferred_value) =
+            find_in_slice_by_key(&LANGUAGES, primary_language, |record| record.subtag)
+                .and_then(|record| record.preferred_value)
         {
             primary_language = preferred_value;
         }
@@ -429,10 +420,9 @@ impl LanguageTag {
             if extlang.contains('-') {
                 return Err(ValidationError::MultipleExtendedLanguageSubtags);
             }
-            if let Some(preferred_value) = EXTLANGS
-                .iter()
-                .find(|record| record.subtag == extlang)
-                .map(|record| record.preferred_value)
+            if let Some(preferred_value) =
+                find_in_slice_by_key(&EXTLANGS, extlang, |record| record.subtag)
+                    .map(|record| record.preferred_value)
             {
                 primary_language = preferred_value;
             } else {
@@ -451,16 +441,15 @@ impl LanguageTag {
 
         // Script
         if let Some(script) = self.script() {
-            let script = SCRIPTS
-                .iter()
-                .find(|record| record.subtag == script)
+            let script = find_in_slice_by_key(&SCRIPTS, script, |record| record.subtag)
                 .and_then(|record| record.preferred_value)
                 .unwrap_or(script);
 
             // Suppress-Script
-            let match_suppress_script = LANGUAGES.iter().any(|record| {
-                record.subtag == primary_language && record.suppress_script == Some(script)
-            });
+            let match_suppress_script =
+                find_in_slice_by_key(&LANGUAGES, primary_language, |record| record.subtag)
+                    .filter(|record| record.suppress_script == Some(script))
+                    .is_some();
             if !match_suppress_script {
                 serialization.push('-');
                 serialization.push_str(script);
@@ -472,9 +461,7 @@ impl LanguageTag {
         if let Some(region) = self.region() {
             serialization.push('-');
             serialization.push_str(
-                REGIONS
-                    .iter()
-                    .find(|record| record.subtag == region)
+                find_in_slice_by_key(&REGIONS, region, |record| record.subtag)
                     .and_then(|record| record.preferred_value)
                     .unwrap_or(region),
             );
@@ -483,9 +470,7 @@ impl LanguageTag {
 
         // Variant
         for variant in self.variant_subtags() {
-            let variant = VARIANTS
-                .iter()
-                .find(|record| record.subtag == variant)
+            let variant = find_in_slice_by_key(&VARIANTS, variant, |record| record.subtag)
                 .and_then(|record| record.preferred_value)
                 .unwrap_or(variant);
             let variant_already_exists = serialization.split('-').any(|subtag| subtag == variant);
@@ -1036,5 +1021,17 @@ impl Error for ValidationError {
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str(self.description())
+    }
+}
+
+fn find_in_slice_by_key<'a, T>(
+    slice: &'a [T],
+    value: &'a str,
+    key_extractor: impl FnMut(&'a T) -> &'a str,
+) -> Option<&'a T> {
+    if let Ok(position) = slice.binary_search_by_key(&value, key_extractor) {
+        Some(&slice[position])
+    } else {
+        None
     }
 }
