@@ -53,6 +53,8 @@ use crate::iana_registry::*;
 use std::error::Error;
 use std::fmt;
 use std::iter::once;
+use std::ops::Deref;
+use std::str::FromStr;
 use std::str::Split;
 
 /// A language tag as described in [RFC 5646](https://tools.ietf.org/html/rfc5646).
@@ -218,12 +220,12 @@ impl LanguageTag {
     /// If the language tag is not "well-formed" a `ParseError` variant will be returned.
     pub fn parse(input: &str) -> Result<Self, ParseError> {
         //grandfathered tags
-        if let Some(record) = GRANDFATHEREDS
+        if let Some(tag) = GRANDFATHEREDS
             .iter()
-            .find(|record| record.tag.eq_ignore_ascii_case(input))
+            .find(|record| record.eq_ignore_ascii_case(input))
         {
             // grandfathered tag
-            Ok(tag_from_primary_language(record.tag))
+            Ok(tag_from_primary_language(*tag))
         } else if input.starts_with("x-") || input.starts_with("X-") {
             // private use
             if !is_alphanumeric_or_dash(input) {
@@ -266,8 +268,7 @@ impl LanguageTag {
         }
 
         // The tag is in the list of grandfathered tags
-        if find_in_slice_by_key(&GRANDFATHEREDS, &self.serialization, |record| record.tag).is_some()
-        {
+        if is_in_str_slice_set(&GRANDFATHEREDS, &self.serialization) {
             return Ok(());
         }
 
@@ -283,14 +284,14 @@ impl LanguageTag {
         // subtags appear in the IANA Language Subtag Registry as of the
         // particular registry date.
         let primary_language = self.primary_language();
-        if find_in_slice_by_key(&LANGUAGES, primary_language, |record| record.subtag).is_none() {
+        if !is_in_from_str_slice_set(&LANGUAGES, primary_language) {
             return Err(ValidationError::PrimaryLanguageNotInRegistry);
         }
         if let Some(extended_language) = self.extended_language() {
-            if let Some(record) =
-                find_in_slice_by_key(&EXTLANGS, extended_language, |record| record.subtag)
+            if let Some(extended_language_prefix) =
+                find_in_from_str_slice_map(&EXTLANGS, extended_language)
             {
-                if !self.serialization.starts_with(record.prefix) {
+                if !self.serialization.starts_with(extended_language_prefix) {
                     return Err(ValidationError::WrongExtendedLanguagePrefix);
                 }
             } else {
@@ -298,19 +299,18 @@ impl LanguageTag {
             }
         }
         if let Some(script) = self.script() {
-            if find_in_slice_by_key(&SCRIPTS, script, |record| record.subtag).is_none() {
+            if !is_in_from_str_slice_set(&SCRIPTS, script) {
                 return Err(ValidationError::ScriptNotInRegistry);
             }
         }
         if let Some(region) = self.region() {
-            if find_in_slice_by_key(&REGIONS, region, |record| record.subtag).is_none() {
+            if !is_in_from_str_slice_set(&REGIONS, region) {
                 return Err(ValidationError::RegionNotInRegistry);
             }
         }
         for variant in self.variant_subtags() {
-            if let Some(record) = find_in_slice_by_key(&VARIANTS, variant, |record| record.subtag) {
-                if !record
-                    .prefixes
+            if let Some(variant_prefixes) = find_in_str_slice_map(&VARIANTS, variant) {
+                if !variant_prefixes
                     .split(' ')
                     .any(|prefix| self.serialization.starts_with(prefix))
                 {
@@ -385,18 +385,19 @@ impl LanguageTag {
         }
 
         // 2 Redundant or grandfathered tags are replaced by their 'Preferred-Value', if there is one.
-        if let Some(record) =
-            find_in_slice_by_key(&GRANDFATHEREDS, &self.serialization, |record| record.tag)
-        {
-            return Ok(if let Some(preferred_value) = record.preferred_value {
-                Self::parse(preferred_value).unwrap()
-            } else {
-                self.clone()
-            });
+        if is_in_str_slice_set(&GRANDFATHEREDS, &self.serialization) {
+            return Ok(
+                if let Some(preferred_value) =
+                    find_in_str_slice_map(&GRANDFATHEREDS_PREFERRED_VALUE, &self.serialization)
+                {
+                    Self::parse(preferred_value).unwrap()
+                } else {
+                    self.clone()
+                },
+            );
         }
         if let Some(preferred_value) =
-            find_in_slice_by_key(&REDUNDANTS, &self.serialization, |record| record.tag)
-                .and_then(|record| record.preferred_value)
+            find_in_str_slice_map(&REDUNDANTS_PREFERRED_VALUE, &self.serialization)
         {
             return Ok(Self::parse(preferred_value).unwrap());
         }
@@ -406,8 +407,7 @@ impl LanguageTag {
         // Primary language
         let mut primary_language = self.primary_language();
         if let Some(preferred_value) =
-            find_in_slice_by_key(&LANGUAGES, primary_language, |record| record.subtag)
-                .and_then(|record| record.preferred_value)
+            find_in_from_str_slice_map(&LANGUAGES_PREFERRED_VALUE, primary_language)
         {
             primary_language = preferred_value;
         }
@@ -421,8 +421,7 @@ impl LanguageTag {
                 return Err(ValidationError::MultipleExtendedLanguageSubtags);
             }
             if let Some(preferred_value) =
-                find_in_slice_by_key(&EXTLANGS, extlang, |record| record.subtag)
-                    .map(|record| record.preferred_value)
+                find_in_from_str_slice_map(&EXTLANGS_PREFERRED_VALUE, extlang)
             {
                 primary_language = preferred_value;
             } else {
@@ -441,14 +440,13 @@ impl LanguageTag {
 
         // Script
         if let Some(script) = self.script() {
-            let script = find_in_slice_by_key(&SCRIPTS, script, |record| record.subtag)
-                .and_then(|record| record.preferred_value)
-                .unwrap_or(script);
+            let script =
+                find_in_from_str_slice_map(&SCRIPTS_PREFERRED_VALUE, script).unwrap_or(script);
 
             // Suppress-Script
             let match_suppress_script =
-                find_in_slice_by_key(&LANGUAGES, primary_language, |record| record.subtag)
-                    .filter(|record| record.suppress_script == Some(script))
+                find_in_from_str_slice_map(&LANGUAGES_SUPPRESS_SCRIPT, primary_language)
+                    .filter(|suppress_script| *suppress_script == script)
                     .is_some();
             if !match_suppress_script {
                 serialization.push('-');
@@ -461,18 +459,15 @@ impl LanguageTag {
         if let Some(region) = self.region() {
             serialization.push('-');
             serialization.push_str(
-                find_in_slice_by_key(&REGIONS, region, |record| record.subtag)
-                    .and_then(|record| record.preferred_value)
-                    .unwrap_or(region),
+                find_in_from_str_slice_map(&REGIONS_PREFERRED_VALUE, region).unwrap_or(region),
             );
         }
         let region_end = serialization.len();
 
         // Variant
         for variant in self.variant_subtags() {
-            let variant = find_in_slice_by_key(&VARIANTS, variant, |record| record.subtag)
-                .and_then(|record| record.preferred_value)
-                .unwrap_or(variant);
+            let variant =
+                *find_in_str_slice_map(&VARIANTS_PREFERRED_VALUE, variant).unwrap_or(&variant);
             let variant_already_exists = serialization.split('-').any(|subtag| subtag == variant);
             if !variant_already_exists {
                 serialization.push('-');
@@ -569,7 +564,7 @@ impl LanguageTag {
     }
 }
 
-impl std::str::FromStr for LanguageTag {
+impl FromStr for LanguageTag {
     type Err = ParseError;
 
     #[inline]
@@ -1024,13 +1019,31 @@ impl fmt::Display for ValidationError {
     }
 }
 
-fn find_in_slice_by_key<'a, T>(
-    slice: &'a [T],
-    value: &'a str,
-    key_extractor: impl FnMut(&'a T) -> &'a str,
-) -> Option<&'a T> {
-    if let Ok(position) = slice.binary_search_by_key(&value, key_extractor) {
-        Some(&slice[position])
+fn is_in_str_slice_set(slice: &[&'static str], value: &str) -> bool {
+    slice.binary_search(&value).is_ok()
+}
+
+fn is_in_from_str_slice_set<T: Copy + Ord + FromStr>(slice: &[T], value: &str) -> bool {
+    match T::from_str(value) {
+        Ok(key) => slice.binary_search(&key).is_ok(),
+        Err(_) => false,
+    }
+}
+
+fn find_in_str_slice_map<'a, V>(slice: &'a [(&'static str, V)], value: &str) -> Option<&'a V> {
+    if let Ok(position) = slice.binary_search_by_key(&value, |t| t.0) {
+        Some(&slice[position].1)
+    } else {
+        None
+    }
+}
+
+fn find_in_from_str_slice_map<'a, K: Copy + Ord + FromStr, V: Deref<Target = str>>(
+    slice: &'a [(K, V)],
+    value: &str,
+) -> Option<&'a str> {
+    if let Ok(position) = slice.binary_search_by_key(&K::from_str(value).ok()?, |t| t.0) {
+        Some(&*slice[position].1)
     } else {
         None
     }
