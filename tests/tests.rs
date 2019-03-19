@@ -232,6 +232,12 @@ fn test_is_valid() {
         "zh-Latn-wadegile",
         "en-unifon",
         "en-a-bbb-x-a-ccc",
+        "ccd",
+        "qra",
+        "en-Qabx",
+        "en-QU",
+        "en-XD",
+        "qqq-Latn-RS",
     ];
     for valid_tag in valid_tags {
         let validation = LanguageTag::parse(valid_tag).unwrap().validate();
@@ -247,9 +253,9 @@ fn test_is_valid() {
 #[test]
 fn test_is_not_valid() {
     let invalid_tags = vec![
-        "qqq-Latn-RS",
+        "zzz-Latn-RS",
         "sr-Latq-RS",
-        "sr-Latn-XX",
+        "sr-Latn-ZY",
         "de-gan",
         "zhb-gan",
         "zh-Hans-wadegile",
