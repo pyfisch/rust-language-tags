@@ -284,7 +284,9 @@ impl LanguageTag {
         // subtags appear in the IANA Language Subtag Registry as of the
         // particular registry date.
         let primary_language = self.primary_language();
-        if !is_in_from_str_slice_set(&LANGUAGES, primary_language) {
+        if !between(primary_language, "qaa", "qtz")
+            && !is_in_from_str_slice_set(&LANGUAGES, primary_language)
+        {
             return Err(ValidationError::PrimaryLanguageNotInRegistry);
         }
         if let Some(extended_language) = self.extended_language() {
@@ -299,12 +301,15 @@ impl LanguageTag {
             }
         }
         if let Some(script) = self.script() {
-            if !is_in_from_str_slice_set(&SCRIPTS, script) {
+            if !between(script, "Qaaa", "Qabx") && !is_in_from_str_slice_set(&SCRIPTS, script) {
                 return Err(ValidationError::ScriptNotInRegistry);
             }
         }
         if let Some(region) = self.region() {
-            if !is_in_from_str_slice_set(&REGIONS, region) {
+            if !between(region, "QM", "QZ")
+                && !between(region, "XA", "XZ")
+                && !is_in_from_str_slice_set(&REGIONS, region)
+            {
                 return Err(ValidationError::RegionNotInRegistry);
             }
         }
@@ -1017,6 +1022,10 @@ impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str(self.description())
     }
+}
+
+fn between<T: Ord>(value: T, start: T, end: T) -> bool {
+    start <= value && value <= end
 }
 
 fn is_in_str_slice_set(slice: &[&'static str], value: &str) -> bool {
