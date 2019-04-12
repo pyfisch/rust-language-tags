@@ -175,6 +175,14 @@ fn test_extension() {
         parts(&"en-a-bbb-x-a-ccc".parse().unwrap())
     );
     assert_eq!(
+        (
+            "en",
+            Some("a-babble-b-warble"),
+            vec![('a', "babble"), ('b', "warble")]
+        ),
+        parts(&"en-a-babble-b-warble".parse().unwrap())
+    );
+    assert_eq!(
         ("fr", Some("a-latn"), vec![('a', "latn")]),
         parts(&"fr-a-Latn".parse().unwrap())
     );
@@ -182,13 +190,17 @@ fn test_extension() {
         (
             "en",
             Some("r-extended-sequence"),
-            vec![('r', "extended"), ('r', "sequence")]
+            vec![('r', "extended-sequence")]
         ),
         parts(
             &"en-Latn-GB-boont-r-extended-sequence-x-private"
                 .parse()
                 .unwrap()
         )
+    );
+    assert_eq!(
+        ("en", Some("r-az-r-qt"), vec![('r', "az"), ('r', "qt")]),
+        parts(&"en-r-az-r-qt".parse().unwrap())
     );
     assert_eq!(("i-tsu", None, vec![]), parts(&"i-tsu".parse().unwrap()));
 }
@@ -347,6 +359,8 @@ fn test_canonicalize() {
         ("ja-Latn-hepburn-heploc", "ja-Latn-hepburn-alalc97"),
         ("en-b-warble-a-babble", "en-a-babble-b-warble"),
         ("en-b-ccc-bbb-a-aaa-X-xyz", "en-a-aaa-b-ccc-bbb-x-xyz"),
+        ("en-r-az-r-qt", "en-r-az-r-qt"),
+        ("en-r-qt-r-az", "en-r-az-r-qt"),
     ];
     for (input, output) in conversion {
         let canonicalization = LanguageTag::parse(input).unwrap().canonicalize();

@@ -116,10 +116,7 @@ impl LanguageTag {
     /// Valid language tags have at most one extended language.
     #[inline]
     pub fn extended_language_subtags(&self) -> impl Iterator<Item = &str> {
-        match self.extended_language() {
-            Some(parts) => SubtagListIterator::new(parts),
-            None => SubtagListIterator::new(""),
-        }
+        self.extended_language().unwrap_or("").split_terminator('-')
     }
 
     /// Return the [primary language subtag](https://tools.ietf.org/html/rfc5646#section-2.2.1)
@@ -162,10 +159,7 @@ impl LanguageTag {
     /// Iterate on the [variant subtags](https://tools.ietf.org/html/rfc5646#section-2.2.5).
     #[inline]
     pub fn variant_subtags(&self) -> impl Iterator<Item = &str> {
-        match self.variant() {
-            Some(parts) => SubtagListIterator::new(parts),
-            None => SubtagListIterator::new(""),
-        }
+        self.variant().unwrap_or("").split_terminator('-')
     }
 
     /// Return the [extension subtags](https://tools.ietf.org/html/rfc5646#section-2.2.6).
@@ -202,10 +196,10 @@ impl LanguageTag {
     /// Iterate on the [private use subtags](https://tools.ietf.org/html/rfc5646#section-2.2.7).
     #[inline]
     pub fn private_use_subtags(&self) -> impl Iterator<Item = &str> {
-        match self.private_use() {
-            Some(parts) => SubtagListIterator::new(&parts[2..]),
-            None => SubtagListIterator::new(""),
-        }
+        self.private_use()
+            .map(|part| &part[2..])
+            .unwrap_or("")
+            .split_terminator('-')
     }
 
     /// Create a `LanguageTag` from its serialization.
@@ -485,15 +479,10 @@ impl LanguageTag {
         // 1.  Extension sequences are ordered into case-insensitive ASCII order by singleton subtags
         if self.extension().is_some() {
             let mut extensions: Vec<_> = self.extension_subtags().collect();
-            extensions.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
-
-            let mut current_extension = ' ';
+            extensions.sort();
             for (k, v) in extensions {
-                if k != current_extension {
-                    serialization.push('-');
-                    serialization.push(k);
-                    current_extension = k;
-                }
+                serialization.push('-');
+                serialization.push(k);
                 serialization.push('-');
                 serialization.push_str(v);
             }
@@ -760,42 +749,13 @@ fn parse_language_tag(input: &str) -> Result<LanguageTag, ParseError> {
     })
 }
 
-struct SubtagListIterator<'a> {
-    split: Split<'a, char>,
-}
-
-impl<'a> SubtagListIterator<'a> {
-    fn new(input: &'a str) -> Self {
-        Self {
-            split: input.split('-'),
-        }
-    }
-}
-
-impl<'a> Iterator for SubtagListIterator<'a> {
-    type Item = &'a str;
-
-    fn next(&mut self) -> Option<&'a str> {
-        let tag = self.split.next()?;
-        if tag.is_empty() {
-            None
-        } else {
-            Some(tag)
-        }
-    }
-}
-
 struct ExtensionsIterator<'a> {
-    split: Split<'a, char>,
-    singleton: Option<char>,
+    input: &'a str,
 }
 
 impl<'a> ExtensionsIterator<'a> {
     fn new(input: &'a str) -> Self {
-        Self {
-            split: input.split('-'),
-            singleton: None,
-        }
+        Self { input }
     }
 }
 
@@ -803,17 +763,21 @@ impl<'a> Iterator for ExtensionsIterator<'a> {
     type Item = (char, &'a str);
 
     fn next(&mut self) -> Option<(char, &'a str)> {
-        let tag = self.split.next()?;
-        if tag.is_empty() {
-            None
-        } else if tag.len() == 1 {
-            self.singleton = tag.chars().next();
-            self.next()
-        } else if let Some(singleton) = self.singleton {
-            Some((singleton, tag))
-        } else {
-            panic!("No singleton found in extension")
+        let mut parts_iterator = self.input.split_terminator('-');
+        let singleton = parts_iterator.next()?.chars().next().unwrap();
+        let mut content_size: usize = 2;
+        for part in parts_iterator {
+            if part.len() == 1 {
+                let content = &self.input[2..content_size - 1];
+                self.input = &self.input[content_size..];
+                return Some((singleton, content));
+            } else {
+                content_size += part.len() + 1;
+            }
         }
+        let result = self.input.get(2..).map(|content| (singleton, content));
+        self.input = "";
+        result
     }
 }
 
