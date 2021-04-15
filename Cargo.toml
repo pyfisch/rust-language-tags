@@ -10,7 +10,7 @@ edition = "2018"
 description = "Language tags for Rust"
 license = "MIT/Apache-2.0"
 repository = "https://github.com/pyfisch/rust-language-tags"
-keywords = ["language", "i18n", "internationalization", "translation", "http", "html"]
+keywords = ["language", "i18n", "http", "html"]
 categories = ["parser-implementations"]
 
 [badges]
