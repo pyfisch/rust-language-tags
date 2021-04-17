@@ -48,6 +48,8 @@
 //! ```
 
 mod iana_registry;
+#[cfg(feature = "serde")]
+mod serde;
 
 use crate::iana_registry::*;
 use std::error::Error;
