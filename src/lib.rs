@@ -879,7 +879,7 @@ fn to_lowercase<'a>(s: &'a str) -> impl Iterator<Item = char> + 'a {
 }
 
 /// Errors returned by `LanguageTag` parsing
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ParseError {
     /// If an extension subtag is present, it must not be empty.
     EmptyExtension,
@@ -899,31 +899,25 @@ pub enum ParseError {
     TooManyExtlangs,
 }
 
-impl Error for ParseError {
-    fn description(&self) -> &str {
-        match self {
-            ParseError::EmptyExtension => "If an extension subtag is present, it must not be empty",
-            ParseError::EmptyPrivateUse => "If the `x` subtag is present, it must not be empty",
-            ParseError::ForbiddenChar => "The langtag contains a char not allowed",
-            ParseError::InvalidSubtag => {
-                "A subtag fails to parse, it does not match any other subtags"
-            }
-            ParseError::InvalidLanguage => "The given language subtag is invalid",
-            ParseError::SubtagTooLong => "A subtag may be eight characters in length at maximum",
-            ParseError::EmptySubtag => "A subtag should not be empty",
-            ParseError::TooManyExtlangs => "At maximum three extlangs are allowed",
-        }
-    }
-}
+impl Error for ParseError {}
 
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(self.description())
+        f.write_str(match self {
+            Self::EmptyExtension => "if an extension subtag is present, it must not be empty",
+            Self::EmptyPrivateUse => "if the `x` subtag is present, it must not be empty",
+            Self::ForbiddenChar => "the langtag contains a char not allowed",
+            Self::InvalidSubtag => "a subtag fails to parse, it does not match any other subtags",
+            Self::InvalidLanguage => "the given language subtag is invalid",
+            Self::SubtagTooLong => "a subtag may be eight characters in length at maximum",
+            Self::EmptySubtag => "a subtag should not be empty",
+            Self::TooManyExtlangs => "at maximum three extlangs are allowed",
+        })
     }
 }
 
 /// Errors returned by the `LanguageTag` validation
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ValidationError {
     /// The same variant subtag is only allowed once in a tag.
     DuplicateVariant,
@@ -947,46 +941,42 @@ pub enum ValidationError {
     WrongVariantPrefix,
 }
 
-impl Error for ValidationError {
-    fn description(&self) -> &str {
-        match self {
-            ValidationError::DuplicateVariant => {
-                "The same variant subtag is only allowed once in a tag"
-            }
-            ValidationError::DuplicateExtension => {
-                "The same extension subtag is only allowed once in a tag"
-            }
-            ValidationError::MultipleExtendedLanguageSubtags => {
-                "only one extended language subtag is allowed"
-            }
-            ValidationError::PrimaryLanguageNotInRegistry => {
-                "The primary language is not in the IANA Language Subtag Registry"
-            }
-            ValidationError::ExtendedLanguageNotInRegistry => {
-                "The extended language is not in the IANA Language Subtag Registry"
-            }
-            ValidationError::ScriptNotInRegistry => {
-                "The script is not in the IANA Language Subtag Registry"
-            }
-            ValidationError::RegionNotInRegistry => {
-                "The region is not in the IANA Language Subtag Registry"
-            }
-            ValidationError::VariantNotInRegistry => {
-                "A variant is not in the IANA Language Subtag Registry"
-            }
-            ValidationError::WrongExtendedLanguagePrefix => {
-                "The primary language is not the expected extended language prefix from the IANA Language Subtag Registry"
-            }
-            ValidationError::WrongVariantPrefix => {
-                "The language tag has not one of the expected variant prefix from the IANA Language Subtag Registry"
-            }
-        }
-    }
-}
+impl Error for ValidationError {}
 
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(self.description())
+        f.write_str(match self {
+            Self::DuplicateVariant => {
+                "the same variant subtag is only allowed once in a tag"
+            }
+            Self::DuplicateExtension => {
+                "the same extension subtag is only allowed once in a tag"
+            }
+            Self::MultipleExtendedLanguageSubtags => {
+                "only one extended language subtag is allowed"
+            }
+            Self::PrimaryLanguageNotInRegistry => {
+                "the primary language is not in the IANA Language Subtag Registry"
+            }
+            Self::ExtendedLanguageNotInRegistry => {
+                "the extended language is not in the IANA Language Subtag Registry"
+            }
+            Self::ScriptNotInRegistry => {
+                "the script is not in the IANA Language Subtag Registry"
+            }
+            Self::RegionNotInRegistry => {
+                "the region is not in the IANA Language Subtag Registry"
+            }
+            Self::VariantNotInRegistry => {
+                "a variant is not in the IANA Language Subtag Registry"
+            }
+            Self::WrongExtendedLanguagePrefix => {
+                "the primary language is not the expected extended language prefix from the IANA Language Subtag Registry"
+            }
+            Self::WrongVariantPrefix => {
+                "the language tag has not one of the expected variant prefix from the IANA Language Subtag Registry"
+            }
+        })
     }
 }
 
