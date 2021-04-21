@@ -15,7 +15,7 @@ impl Deref for LanguageSubtag {
 
     fn deref(&self) -> &str {
         let mut end = 3;
-        while self.0[end - 1] == (' ' as u8) {
+        while self.0[end - 1] == b' ' {
             end -= 1;
         }
         unsafe { str::from_utf8_unchecked(&self.0[..end]) }
@@ -27,7 +27,7 @@ impl str::FromStr for LanguageSubtag {
 
     fn from_str(input: &str) -> Result<Self, ()> {
         if 2 <= input.len() && input.len() <= 3 {
-            let mut value = [' ' as u8; 3];
+            let mut value = [b' '; 3];
             value[..input.len()].copy_from_slice(input.as_bytes());
             Ok(LanguageSubtag(value))
         } else {
@@ -63,7 +63,7 @@ impl str::FromStr for ScriptSubtag {
 
     fn from_str(input: &str) -> Result<Self, ()> {
         if input.len() == 4 {
-            let mut value = [' ' as u8; 4];
+            let mut value = [b' '; 4];
             value.copy_from_slice(input.as_bytes());
             Ok(ScriptSubtag(value))
         } else {
@@ -86,7 +86,7 @@ impl Deref for RegionSubtag {
 
     fn deref(&self) -> &str {
         let mut end = 3;
-        while self.0[end - 1] == (' ' as u8) {
+        while self.0[end - 1] == b' ' {
             end -= 1;
         }
         unsafe { str::from_utf8_unchecked(&self.0[..end]) }
@@ -98,7 +98,7 @@ impl str::FromStr for RegionSubtag {
 
     fn from_str(input: &str) -> Result<Self, ()> {
         if 2 <= input.len() && input.len() <= 3 {
-            let mut value = [' ' as u8; 3];
+            let mut value = [b' '; 3];
             value[..input.len()].copy_from_slice(input.as_bytes());
             Ok(RegionSubtag(value))
         } else {

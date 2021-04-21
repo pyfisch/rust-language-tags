@@ -481,7 +481,7 @@ impl LanguageTag {
         // 1.  Extension sequences are ordered into case-insensitive ASCII order by singleton subtags
         if self.extension().is_some() {
             let mut extensions: Vec<_> = self.extension_subtags().collect();
-            extensions.sort();
+            extensions.sort_unstable();
             for (k, v) in extensions {
                 serialization.push('-');
                 serialization.push(k);
@@ -864,17 +864,17 @@ fn is_alphanumeric_or_dash(s: &str) -> bool {
     s.chars().all(|x| x.is_ascii_alphanumeric() || x == '-')
 }
 
-fn to_uppercase<'a>(s: &'a str) -> impl Iterator<Item = char> + 'a {
+fn to_uppercase(s: &'_ str) -> impl Iterator<Item = char> + '_ {
     s.chars().map(|c| c.to_ascii_uppercase())
 }
 
 // Beware: panics if s.len() == 0 (should never happen in our code)
-fn to_uppercase_first<'a>(s: &'a str) -> impl Iterator<Item = char> + 'a {
+fn to_uppercase_first(s: &'_ str) -> impl Iterator<Item = char> + '_ {
     let mut chars = s.chars();
     once(chars.next().unwrap().to_ascii_uppercase()).chain(chars.map(|c| c.to_ascii_lowercase()))
 }
 
-fn to_lowercase<'a>(s: &'a str) -> impl Iterator<Item = char> + 'a {
+fn to_lowercase(s: &'_ str) -> impl Iterator<Item = char> + '_ {
     s.chars().map(|c| c.to_ascii_lowercase())
 }
 
