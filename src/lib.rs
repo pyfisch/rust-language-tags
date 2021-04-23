@@ -18,8 +18,9 @@
 //!
 //! ```rust
 //! use language_tags::LanguageTag;
+//!
 //! let langtag = LanguageTag::parse("fr-BE").unwrap();
-//! assert_eq!(format!("{}", langtag), "fr-BE");
+//! assert_eq!(langtag.to_string(), "fr-BE");
 //! ```
 //!
 //! Parse a tag representing a special type of English specified by private agreement:
@@ -27,6 +28,7 @@
 //! ```rust
 //! use language_tags::LanguageTag;
 //! use std::iter::FromIterator;
+//!
 //! let langtag: LanguageTag = "en-x-twain".parse().unwrap();
 //! assert_eq!(langtag.primary_language(), "en");
 //! assert_eq!(Vec::from_iter(langtag.private_use_subtags()), vec!["twain"]);
@@ -42,6 +44,7 @@
 //!
 //! ```rust
 //! use language_tags::LanguageTag;
+//!
 //! let mut langtag_server = LanguageTag::parse("de-AT").unwrap();
 //! let mut langtag_user = LanguageTag::parse("de").unwrap();
 //! assert!(langtag_user.matches(&langtag_server));
@@ -96,6 +99,13 @@ impl LanguageTag {
     }
 
     /// Return the [primary language subtag](https://tools.ietf.org/html/rfc5646#section-2.2.1).
+    ///
+    /// ```
+    /// use language_tags::LanguageTag;
+    ///
+    /// let language_tag = LanguageTag::parse("zh-cmn-Hans-CN").unwrap();
+    /// assert_eq!(language_tag.primary_language(), "zh");
+    /// ```
     #[inline]
     pub fn primary_language(&self) -> &str {
         &self.serialization[..self.language_end]
@@ -104,6 +114,13 @@ impl LanguageTag {
     /// Return the [extended language subtags](https://tools.ietf.org/html/rfc5646#section-2.2.2).
     ///
     /// Valid language tags have at most one extended language.
+    ///
+    /// ```
+    /// use language_tags::LanguageTag;
+    ///
+    /// let language_tag = LanguageTag::parse("zh-cmn-Hans-CN").unwrap();
+    /// assert_eq!(language_tag.extended_language(), Some("cmn"));
+    /// ```
     #[inline]
     pub fn extended_language(&self) -> Option<&str> {
         if self.language_end == self.extlang_end {
@@ -116,6 +133,13 @@ impl LanguageTag {
     /// Iterate on the [extended language subtags](https://tools.ietf.org/html/rfc5646#section-2.2.2).
     ///
     /// Valid language tags have at most one extended language.
+    ///
+    /// ```
+    /// use language_tags::LanguageTag;
+    ///
+    /// let language_tag = LanguageTag::parse("zh-cmn-Hans-CN").unwrap();
+    /// assert_eq!(language_tag.extended_language_subtags().collect::<Vec<_>>(), vec!["cmn"]);
+    /// ```
     #[inline]
     pub fn extended_language_subtags(&self) -> impl Iterator<Item = &str> {
         self.extended_language().unwrap_or("").split_terminator('-')
@@ -123,12 +147,26 @@ impl LanguageTag {
 
     /// Return the [primary language subtag](https://tools.ietf.org/html/rfc5646#section-2.2.1)
     /// and its [extended language subtags](https://tools.ietf.org/html/rfc5646#section-2.2.2).
+    ///
+    /// ```
+    /// use language_tags::LanguageTag;
+    ///
+    /// let language_tag = LanguageTag::parse("zh-cmn-Hans-CN").unwrap();
+    /// assert_eq!(language_tag.full_language(), "zh-cmn");
+    /// ```
     #[inline]
     pub fn full_language(&self) -> &str {
         &self.serialization[..self.extlang_end]
     }
 
     /// Return the [script subtag](https://tools.ietf.org/html/rfc5646#section-2.2.3).
+    ///
+    /// ```
+    /// use language_tags::LanguageTag;
+    ///
+    /// let language_tag = LanguageTag::parse("zh-cmn-Hans-CN").unwrap();
+    /// assert_eq!(language_tag.script(), Some("Hans"));
+    /// ```
     #[inline]
     pub fn script(&self) -> Option<&str> {
         if self.extlang_end == self.script_end {
@@ -139,6 +177,14 @@ impl LanguageTag {
     }
 
     /// Return the [region subtag](https://tools.ietf.org/html/rfc5646#section-2.2.4).
+    ///
+    ///
+    /// ```
+    /// use language_tags::LanguageTag;
+    ///
+    /// let language_tag = LanguageTag::parse("zh-cmn-Hans-CN").unwrap();
+    /// assert_eq!(language_tag.region(), Some("CN"));
+    /// ```
     #[inline]
     pub fn region(&self) -> Option<&str> {
         if self.script_end == self.region_end {
@@ -149,6 +195,13 @@ impl LanguageTag {
     }
 
     /// Return the [variant subtags](https://tools.ietf.org/html/rfc5646#section-2.2.5).
+    ///
+    /// ```
+    /// use language_tags::LanguageTag;
+    ///
+    /// let language_tag = LanguageTag::parse("zh-Latn-TW-pinyin").unwrap();
+    /// assert_eq!(language_tag.variant(), Some("pinyin"));
+    /// ```
     #[inline]
     pub fn variant(&self) -> Option<&str> {
         if self.region_end == self.variant_end {
@@ -159,12 +212,26 @@ impl LanguageTag {
     }
 
     /// Iterate on the [variant subtags](https://tools.ietf.org/html/rfc5646#section-2.2.5).
+    ///
+    /// ```
+    /// use language_tags::LanguageTag;
+    ///
+    /// let language_tag = LanguageTag::parse("zh-Latn-TW-pinyin").unwrap();
+    /// assert_eq!(language_tag.variant_subtags().collect::<Vec<_>>(), vec!["pinyin"]);
+    /// ```
     #[inline]
     pub fn variant_subtags(&self) -> impl Iterator<Item = &str> {
         self.variant().unwrap_or("").split_terminator('-')
     }
 
     /// Return the [extension subtags](https://tools.ietf.org/html/rfc5646#section-2.2.6).
+    ///
+    /// ```
+    /// use language_tags::LanguageTag;
+    ///
+    /// let language_tag = LanguageTag::parse("de-DE-u-co-phonebk").unwrap();
+    /// assert_eq!(language_tag.extension(), Some("u-co-phonebk"));
+    /// ```
     #[inline]
     pub fn extension(&self) -> Option<&str> {
         if self.variant_end == self.extension_end {
@@ -175,6 +242,13 @@ impl LanguageTag {
     }
 
     /// Iterate on the [extension subtags](https://tools.ietf.org/html/rfc5646#section-2.2.6).
+    ///
+    /// ```
+    /// use language_tags::LanguageTag;
+    ///
+    /// let language_tag = LanguageTag::parse("de-DE-u-co-phonebk").unwrap();
+    /// assert_eq!(language_tag.extension_subtags().collect::<Vec<_>>(), vec![('u', "co-phonebk")]);
+    /// ```
     #[inline]
     pub fn extension_subtags(&self) -> impl Iterator<Item = (char, &str)> {
         match self.extension() {
@@ -184,6 +258,14 @@ impl LanguageTag {
     }
 
     /// Return the [private use subtags](https://tools.ietf.org/html/rfc5646#section-2.2.7).
+    ///
+    ///
+    /// ```
+    /// use language_tags::LanguageTag;
+    ///
+    /// let language_tag = LanguageTag::parse("de-x-foo-bar").unwrap();
+    /// assert_eq!(language_tag.private_use(), Some("x-foo-bar"));
+    /// ```
     #[inline]
     pub fn private_use(&self) -> Option<&str> {
         if self.serialization.starts_with("x-") {
@@ -196,6 +278,13 @@ impl LanguageTag {
     }
 
     /// Iterate on the [private use subtags](https://tools.ietf.org/html/rfc5646#section-2.2.7).
+    ///
+    /// ```
+    /// use language_tags::LanguageTag;
+    ///
+    /// let language_tag = LanguageTag::parse("de-x-foo-bar").unwrap();
+    /// assert_eq!(language_tag.private_use_subtags().collect::<Vec<_>>(), vec!["foo", "bar"]);
+    /// ```
     #[inline]
     pub fn private_use_subtags(&self) -> impl Iterator<Item = &str> {
         self.private_use()
@@ -210,6 +299,12 @@ impl LanguageTag {
     /// [RFC 5646](https://tools.ietf.org/html/rfc5646#section-2.2.9).
     /// Full validation could be done with the `validate` method.
     ///
+    /// ```rust
+    /// use language_tags::LanguageTag;
+    ///
+    /// let language_tag = LanguageTag::parse("en-us").unwrap();
+    /// assert_eq!(language_tag.into_string(), "en-US")
+    /// ```
     ///
     /// # Errors
     ///
@@ -523,6 +618,7 @@ impl LanguageTag {
     /// # Examples
     /// ```rust
     /// use language_tags::LanguageTag;
+    ///
     /// let range_italian = LanguageTag::parse("it").unwrap();
     /// let tag_german = LanguageTag::parse("de").unwrap();
     /// let tag_italian_switzerland = LanguageTag::parse("it-CH").unwrap();
