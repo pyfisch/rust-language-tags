@@ -1,4 +1,12 @@
-#![deny(missing_docs)]
+#![deny(
+    future_incompatible,
+    nonstandard_style,
+    rust_2018_idioms,
+    missing_docs,
+    trivial_casts,
+    trivial_numeric_casts,
+    unused_qualifications
+)]
 #![cfg_attr(test, deny(warnings))]
 
 //! Language tags can be used identify human languages, scripts e.g. Latin script, countries and
@@ -667,7 +675,7 @@ impl FromStr for LanguageTag {
 
 impl fmt::Display for LanguageTag {
     #[inline]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.as_str())
     }
 }
@@ -998,7 +1006,7 @@ pub enum ParseError {
 impl Error for ParseError {}
 
 impl fmt::Display for ParseError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
             Self::EmptyExtension => "if an extension subtag is present, it must not be empty",
             Self::EmptyPrivateUse => "if the `x` subtag is present, it must not be empty",
@@ -1040,7 +1048,7 @@ pub enum ValidationError {
 impl Error for ValidationError {}
 
 impl fmt::Display for ValidationError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
             Self::DuplicateVariant => {
                 "the same variant subtag is only allowed once in a tag"
