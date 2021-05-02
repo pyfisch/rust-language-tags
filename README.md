@@ -15,7 +15,7 @@ header fields.
 This package currently supports parsing (fully conformant parser), formatting and comparing
 language tags.
 
-# Examples
+## Examples
 Create a simple language tag representing the French language as spoken
 in Belgium and print it:
 
@@ -49,3 +49,8 @@ let mut langtag_server = LanguageTag::parse("de-AT").unwrap();
 let mut langtag_user = LanguageTag::parse("de").unwrap();
 assert!(langtag_user.matches(&langtag_server));
 ```
+
+## Related crates
+
+If you only want to validate and normalize language or are working with RDF consider using the [oxilangtag](https://github.com/oxigraph/oxilangtag) crate.
+It is much more lightweight as it doesn't contain a language tag database and has a very similar interface to this crate.
