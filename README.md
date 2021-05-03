@@ -52,5 +52,5 @@ assert!(langtag_user.matches(&langtag_server));
 
 ## Related crates
 
-If you only want to validate and normalize language or are working with RDF consider using the [oxilangtag](https://github.com/oxigraph/oxilangtag) crate.
+If you only want to validate and normalize the formatting of language tags or you are working with RDF consider using the [oxilangtag](https://github.com/oxigraph/oxilangtag) crate.
 It is much more lightweight as it doesn't contain a language tag database and has a very similar interface to this crate.
