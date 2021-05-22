@@ -16,8 +16,8 @@ impl<'de> Deserialize<'de> for LanguageTag {
     where
         D: Deserializer<'de>,
     {
-        let input: &str = Deserialize::deserialize(deserializer)?;
-        LanguageTag::parse(input).map_err(serde::de::Error::custom)
+        let input: String = Deserialize::deserialize(deserializer)?;
+        LanguageTag::parse(&input).map_err(serde::de::Error::custom)
     }
 }
 
