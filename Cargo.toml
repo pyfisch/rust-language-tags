@@ -1,6 +1,6 @@
 [package]
 name = "language-tags"
-version = "0.3.1"
+version = "0.3.2"
 authors = [
     "Pyfisch <pyfisch@gmail.com>",
     "Tpt <thomas@pellissier-tanon.fr>"
