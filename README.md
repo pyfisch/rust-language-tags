@@ -1,7 +1,7 @@
 # rust-language-tags
 [![Build Status](https://travis-ci.org/pyfisch/rust-language-tags.svg?branch=master)](https://travis-ci.org/pyfisch/rust-language-tags)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
-[![crates.io](http://meritbadge.herokuapp.com/language-tags)](https://crates.io/crates/language-tags)
+[![crates.io](https://img.shields.io/crates/v/language-tags.svg)](https://crates.io/crates/language-tags)
 [![Documentation](https://docs.rs/language-tags/badge.svg)](https://docs.rs/language-tags)
 
 Language tags can be used identify human languages, scripts e.g. Latin script, countries and
