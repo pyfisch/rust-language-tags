@@ -1,6 +1,6 @@
 use crate::LanguageTag;
-use serde::de::{Error, Visitor};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde_core::de::{Error, Visitor};
+use serde_core::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 
 impl Serialize for LanguageTag {
