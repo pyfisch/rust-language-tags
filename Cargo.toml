@@ -16,8 +16,11 @@ categories = ["parser-implementations"]
 [badges]
 travis-ci = { repository = "pyfisch/rust-language-tags" }
 
+[features]
+serde = ["dep:serde_core"]
+
 [dependencies]
-serde = { version = "1.0", optional = true }
+serde_core = { version = "1.0.220", optional = true }
 
 [dev-dependencies]
 bencher = "0.1"
