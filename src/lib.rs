@@ -72,11 +72,13 @@ use std::str::Split;
 
 /// A language tag as described in [RFC 5646](https://tools.ietf.org/html/rfc5646).
 ///
-/// Language tags are used to help identify languages, whether spoken,
-/// written, signed, or otherwise signaled, for the purpose of
-/// communication.  This includes constructed and artificial languages
-/// but excludes languages not intended primarily for human
-/// communication, such as programming languages.
+/// > Language tags are used to help identify languages, whether spoken,
+/// > written, signed, or otherwise signaled, for the purpose of
+/// > communication.  This includes constructed and artificial languages
+/// > but excludes languages not intended primarily for human
+/// > communication, such as programming languages.
+///
+/// (quoted from section 2 of RFC 5646)
 #[derive(Eq, PartialEq, Debug, Clone, Hash)]
 pub struct LanguageTag {
     /// Syntax described in [RFC 5646 2.1](https://tools.ietf.org/html/rfc5646#section-2.1)
